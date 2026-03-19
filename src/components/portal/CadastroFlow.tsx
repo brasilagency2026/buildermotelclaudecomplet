@@ -210,7 +210,28 @@ export default function CadastroFlow() {
             </div>
             <div style={S.row}>
               <div><label style={S.label}>E-mail *</label><input style={S.input} type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="joao@email.com" required /></div>
-              <div><label style={S.label}>Senha *</label><input style={S.input} type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••" required minLength={6} /></div>
+              <div>
+                <label style={S.label}>Senha *</label>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    style={{ ...S.input, paddingRight: 44 }}
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    placeholder="••••••"
+                    required
+                    minLength={6}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(p => !p)}
+                    style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: '#6b7280', padding: 0, lineHeight: 1 }}
+                    title={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                  >
+                    {showPassword ? '🙈' : '👁'}
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
           {error && <div style={S.err}>{error}</div>}
