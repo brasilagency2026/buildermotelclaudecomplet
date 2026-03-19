@@ -1,0 +1,85 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #0f1117;
+  --surface: #161a24;
+  --card: #1c2130;
+  --border: #252d3d;
+  --gold: #d4a943;
+  --gold2: #f0c060;
+  --gold-dim: rgba(212,169,67,0.12);
+  --gold-border: rgba(212,169,67,0.3);
+  --red: #D4001F;
+  --red-dim: rgba(212,0,31,0.1);
+  --text: #f0ebe0;
+  --muted: #6b7280;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { background: var(--bg); color: var(--text); font-family: var(--font-inter), sans-serif; }
+::selection { background: var(--gold-dim); }
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+@layer components {
+  /* ── BUILDER INPUTS ── */
+  .b-input {
+    @apply w-full px-3.5 py-2.5 rounded-lg text-sm outline-none transition-all duration-200;
+    background: var(--card); border: 1px solid var(--border); color: var(--text);
+  }
+  .b-input::placeholder { color: var(--muted); }
+  .b-input:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(212,169,67,.08); }
+
+  .b-textarea {
+    @apply w-full px-3.5 py-2.5 rounded-lg text-sm outline-none transition-all duration-200 resize-y;
+    background: var(--card); border: 1px solid var(--border); color: var(--text); min-height: 88px; line-height: 1.6;
+  }
+  .b-textarea::placeholder { color: var(--muted); }
+  .b-textarea:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(212,169,67,.08); }
+
+  .b-label {
+    @apply block text-xs font-bold uppercase tracking-widest mb-1.5;
+    color: var(--muted);
+  }
+
+  /* ── BUTTONS ── */
+  .btn-gold {
+    @apply flex items-center justify-center gap-2 font-bold transition-all duration-200 rounded-lg;
+    background: linear-gradient(135deg, var(--gold), var(--gold2)); color: #1a1200;
+  }
+  .btn-gold:hover { opacity: .92; transform: translateY(-1px); }
+
+  .btn-ghost {
+    @apply flex items-center gap-2 font-semibold text-sm transition-all duration-200 rounded-lg px-4 py-2;
+    background: transparent; border: 1px solid var(--border); color: var(--muted);
+  }
+  .btn-ghost:hover { border-color: var(--gold); color: var(--gold); }
+
+  .btn-red {
+    @apply flex items-center justify-center gap-2 font-bold transition-all duration-200 rounded-lg;
+    background: var(--red); color: #fff;
+  }
+  .btn-red:hover { filter: brightness(1.1); transform: translateY(-1px); }
+
+  /* ── SECTION CARD ── */
+  .b-section {
+    @apply rounded-2xl p-6 mb-5;
+    background: var(--surface); border: 1px solid var(--border);
+  }
+  .b-section-title {
+    @apply flex items-center gap-3 mb-1;
+    font-family: var(--font-playfair), serif; font-size: 18px; font-weight: 700;
+  }
+  .b-section-sub { @apply text-xs mb-5; color: var(--muted); margin-left: 30px; }
+
+  /* ── PORTAL CARD ── */
+  .p-card {
+    @apply rounded-md overflow-hidden transition-all duration-200 cursor-pointer;
+    background: var(--card); border: 1px solid var(--border);
+  }
+  .p-card:hover { border-color: #2a3040; transform: translateY(-2px); box-shadow: 0 12px 40px rgba(0,0,0,.7); }
+}

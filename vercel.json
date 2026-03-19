@@ -1,0 +1,15 @@
+{
+  "framework": "nextjs",
+  "regions": ["gru1"],
+  "headers": [
+    {
+      "source": "/motel/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "s-maxage=300, stale-while-revalidate=600" }
+      ]
+    }
+  ],
+  "rewrites": [
+    { "source": "/sitemap.xml", "destination": "/sitemap" }
+  ]
+}
