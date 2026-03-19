@@ -120,16 +120,11 @@ export default function MotelMap({ moteis, userCoords, height = 420 }: Props) {
     if (userCoords) bounds.extend(userCoords)
 
     moteisComCoords.forEach(motel => {
-      const marker = new google.maps.Marker({
-        position: { lat: motel.lat!, lng: motel.lng! },
-        map: mapInstanceRef.current,
-        title: motel.nome,
-        icon: iconMotel,
-        animation: google.maps.Animation.DROP,
-      })
-      bounds.extend({ lat: motel.lat!, lng: motel.lng! })
+      // marker created above per type
 
       const foto = motel.foto_capa || motel.fotos_galeria?.[0]
+      const hasOwnSite = !!motel.site_externo && !motel.usa_builder
+      const href = hasOwnSite ? motel.site_externo : `/motel/${motel.slug}`
       const preco = motel.preco_inicial
         ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 }).format(motel.preco_inicial)
         : null
@@ -137,24 +132,50 @@ export default function MotelMap({ moteis, userCoords, height = 420 }: Props) {
         ? `<div style="font-size:10px;color:#4ade80;margin-bottom:6px">📍 ${motel.distancia_km < 1 ? Math.round(motel.distancia_km * 1000) + 'm' : motel.distancia_km.toFixed(1) + 'km'} de você</div>`
         : ''
 
-      marker.addListener('click', () => {
+      // Ícone diferente para motel com site próprio (verde) vs builder (vermelho)
+      const icon = hasOwnSite ? {
+        path: 'M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z',
+        fillColor: '#22c55e',
+        fillOpacity: 1,
+        strokeColor: '#fff',
+        strokeWeight: 1.5,
+        scale: 1.4,
+        anchor: new google.maps.Point(12, 22),
+      } : iconMotel
+
+      const markerInstance = new google.maps.Marker({
+        position: { lat: motel.lat!, lng: motel.lng! },
+        map: mapInstanceRef.current,
+        title: motel.nome,
+        icon,
+        animation: google.maps.Animation.DROP,
+      })
+
+      bounds.extend({ lat: motel.lat!, lng: motel.lng! })
+
+      markerInstance.addListener('click', () => {
         infoWindowRef.current.setContent(`
           <div style="font-family:sans-serif;min-width:200px;max-width:240px;background:#1c2130;border-radius:10px;overflow:hidden">
-            ${foto ? `<img src="${foto}" alt="${motel.nome}" style="width:100%;height:110px;object-fit:cover;display:block"/>` : ''}
+            ${foto ? `<img src="${foto}" alt="${motel.nome}" style="width:100%;height:110px;object-fit:cover;display:block"/>` : `<div style="height:60px;display:flex;align-items:center;justify-content:center;font-size:32px;background:#0d1117">🏨</div>`}
             <div style="padding:12px">
               ${dist}
+              ${hasOwnSite ? '<div style="font-size:9px;font-weight:700;color:#4ade80;letter-spacing:1px;margin-bottom:4px">SITE PRÓPRIO</div>' : ''}
               <div style="font-weight:700;font-size:14px;color:#f0ebe0;margin-bottom:4px">${motel.nome}</div>
               <div style="font-size:11px;color:#9ca3af;margin-bottom:8px">📍 ${motel.cidade}, ${motel.estado}</div>
-              ${preco ? `<div style="font-size:13px;color:#D4001F;font-weight:700;margin-bottom:8px">a partir de ${preco}<span style="color:#6b7280;font-size:10px;font-weight:400">/2h</span></div>` : ''}
-              <a href="/motel/${motel.slug}" style="display:block;text-align:center;padding:7px;background:#D4001F;color:white;border-radius:6px;font-size:12px;font-weight:600;text-decoration:none">
-                Ver motel →
+              ${!hasOwnSite && preco ? `<div style="font-size:13px;color:#D4001F;font-weight:700;margin-bottom:8px">a partir de ${preco}<span style="color:#6b7280;font-size:10px;font-weight:400">/2h</span></div>` : ''}
+              <a href="${href}" target="${hasOwnSite ? '_blank' : '_self'}" rel="noopener noreferrer"
+                style="display:block;text-align:center;padding:7px;background:${hasOwnSite ? '#22c55e' : '#D4001F'};color:white;border-radius:6px;font-size:12px;font-weight:600;text-decoration:none">
+                ${hasOwnSite ? '🌐 Visitar site →' : 'Ver motel →'}
               </a>
             </div>
           </div>
         `)
-        infoWindowRef.current.open(mapInstanceRef.current, marker)
+        infoWindowRef.current.open(mapInstanceRef.current, markerInstance)
       })
-      markersRef.current.push(marker)
+
+      markersRef.current.push(markerInstance)
+      return // skip the old marker push below
+
     })
 
     // Ajustar bounds apenas se não tiver userCoords (senão já centramos no usuário)
