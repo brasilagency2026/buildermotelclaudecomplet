@@ -87,7 +87,7 @@ export default function HomeClient({ initialMoteis }: { initialMoteis: MotelCard
         {geoLoading && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', background: 'rgba(212,169,67,.06)', border: '1px solid rgba(212,169,67,.2)', borderRadius: 8, marginBottom: 12, fontSize: 13, color: '#d4a943' }}>
             <span style={{ animation: 'spin 1s linear infinite', display: 'inline-block' }}>⏳</span>
-            Detectando sua localização para mostrar motéis mais próximos...
+            Detectando sua localização...
           </div>
         )}
         {geoActive && !geoLoading && (
@@ -133,14 +133,18 @@ export default function HomeClient({ initialMoteis }: { initialMoteis: MotelCard
           <div style={{ textAlign: 'center', padding: '60px 20px', color: '#6b7280' }}>
             <div style={{ fontSize: 48, marginBottom: 12 }}>🔍</div>
             <p>Nenhum motel encontrado.</p>
-            <button onClick={() => { setActiveFilters([]); fetchMoteis(userCoords?.lat, userCoords?.lng, []) }}
-              style={{ marginTop: 12, color: '#D4001F', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, textDecoration: 'underline', fontFamily: 'inherit' }}>
+            <button
+              onClick={() => { setActiveFilters([]); fetchMoteis(userCoords?.lat, userCoords?.lng, []) }}
+              style={{ marginTop: 12, color: '#D4001F', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, textDecoration: 'underline', fontFamily: 'inherit' }}
+            >
               Limpar filtros
             </button>
           </div>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(300px,1fr))', gap: 12 }}>
-            {moteis.map(m => <MotelCard key={m.id} m={m} />)}
+            {moteis.map(m => (
+              <MotelCard key={m.id} m={m} />
+            ))}
           </div>
         )}
       </section>
@@ -151,10 +155,9 @@ export default function HomeClient({ initialMoteis }: { initialMoteis: MotelCard
             <span style={{ display: 'inline-block', width: 3, height: 16, background: '#D4001F', borderRadius: 2 }} />
             {geoActive ? 'Motéis ao seu Redor' : 'Visualizar no Mapa'}
           </div>
-          {geoActive
-            ? <p style={{ fontSize: 12, color: '#4ade80', marginBottom: 12 }}>🔵 Você está aqui · 🔴 Motéis builder · 🟢 Site próprio</p>
-            : <p style={{ fontSize: 12, color: '#6b7280', marginBottom: 12 }}>🔴 Motéis builder · 🟢 Site próprio · Clique para ver detalhes</p>
-          }
+          <p style={{ fontSize: 12, color: '#6b7280', marginBottom: 12 }}>
+            Clique em qualquer pin para ver detalhes do motel.
+          </p>
           <MotelMap moteis={moteis} userCoords={userCoords} height={450} />
         </div>
       </div>
@@ -171,14 +174,19 @@ function MotelCard({ m }: { m: MotelCard }) {
   const linkTarget = hasOwnSite ? '_blank' : '_self'
 
   return (
-    <article
-      style={{ background: '#1c2130', border: '1px solid #252d3d', borderRadius: 6, overflow: 'hidden', transition: 'transform .2s' }}
-      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)' }}
-      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(0)' }}
-    >
-      {/* Photo — clique toujours vers href */}
-      <a href={href} target={linkTarget} rel="noopener noreferrer"
-        style={{ display: 'block', position: 'relative', height: 155, overflow: 'hidden', background: '#0d0d0d', textDecoration: 'none' }}>
+    <article style={{
+      background: '#1c2130',
+      border: '1px solid #252d3d',
+      borderRadius: 6,
+      overflow: 'hidden',
+      transition: 'transform .2s',
+    }}>
+      <a
+        href={href}
+        target={linkTarget}
+        rel="noopener noreferrer"
+        style={{ display: 'block', position: 'relative', height: 155, overflow: 'hidden', background: '#0d0d0d', textDecoration: 'none' }}
+      >
         {foto ? (
           <Image src={foto} alt={m.nome} fill style={{ objectFit: 'cover' }} sizes="320px" />
         ) : (
@@ -192,110 +200,43 @@ function MotelCard({ m }: { m: MotelCard }) {
       </a>
 
       <div style={{ padding: '11px 12px' }}>
-        {/* Nom — lien vers href */}
         <a href={href} target={linkTarget} rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
           <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: '#f0ebe0' }}>
             {m.nome}
           </div>
         </a>
-        <div style={{ fontSize: 10, color: '#6b7280', marginBottom: 10 }}>📍 {m.cidade}, {m.estado}</div>
+        <div style={{ fontSize: 10, color: '#6b7280', marginBottom: 10 }}>
+          📍 {m.cidade}, {m.estado}
+        </div>
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 10, borderTop: '1px solid #252d3d' }}>
           <div>
             {!hasOwnSite && (
-              <>
+              <div>
                 <div style={{ fontSize: 9, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '.5px' }}>a partir de</div>
                 <div style={{ fontFamily: 'var(--font-playfair),serif', fontSize: 22, fontWeight: 900, color: '#D4001F', lineHeight: 1.1 }}>
                   {m.preco_inicial ? fmtBRL(m.preco_inicial) : '—'}
                   <sub style={{ fontSize: 10, color: '#6b7280', fontFamily: 'sans-serif', fontWeight: 400 }}>/2h</sub>
                 </div>
-              </>
-            )}
-            {hasOwnSite && (
-              <div style={{ fontSize: 11, color: '#6b7280' }}>📍 {m.cidade}, {m.estado}</div>
+              </div>
             )}
           </div>
           <div style={{ display: 'flex', gap: 6 }}>
-            <a href={mapsLink(m.endereco, m.lat, m.lng)} target="_blank" rel="noopener"
-              style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 10px', background: 'transparent', border: '1px solid #252d3d', borderRadius: 4, color: '#6b7280', fontSize: 10, fontWeight: 600, textDecoration: 'none' }}>
+            <a
+              href={mapsLink(m.endereco, m.lat, m.lng)}
+              target="_blank"
+              rel="noopener"
+              style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 10px', background: 'transparent', border: '1px solid #252d3d', borderRadius: 4, color: '#6b7280', fontSize: 10, fontWeight: 600, textDecoration: 'none' }}
+            >
               📍 Maps
             </a>
             {!hasOwnSite && m.whatsapp && (
-              <a href={wppLink(m.whatsapp, m.nome)} target="_blank" rel="noopener"
-                style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 10px', background: '#075E54', borderRadius: 4, color: '#fff', fontSize: 10, fontWeight: 700, textDecoration: 'none' }}>
-                💬 WhatsApp
-              </a>
-            )}
-          </div>
-        </div>
-      </div>
-    </article>
-  )`
-  const linkTarget = hasOwnSite ? '_blank' : '_self'
-
-  return (
-    <article
-      style={{ background: '#1c2130', border: `1px solid ${hasOwnSite ? '#1a2e1a' : '#252d3d'}`, borderRadius: 6, overflow: 'hidden', transition: 'transform .2s', position: 'relative' }}
-      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)' }}
-      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(0)' }}
-    >
-      {hasOwnSite && (
-        <div style={{ position: 'absolute', top: 8, left: 8, zIndex: 2, background: 'rgba(74,222,128,.15)', border: '1px solid rgba(74,222,128,.3)', borderRadius: 4, padding: '2px 8px', fontSize: 9, fontWeight: 700, color: '#4ade80', letterSpacing: '.5px' }}>
-          SITE PRÓPRIO
-        </div>
-      )}
-
-      <a href={href} target={linkTarget} rel="noopener noreferrer"
-        style={{ display: 'block', position: 'relative', height: 155, overflow: 'hidden', background: '#0d0d0d', textDecoration: 'none' }}>
-        {foto ? (
-          <Image src={foto} alt={m.nome} fill style={{ objectFit: 'cover' }} sizes="320px" />
-        ) : (
-          <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-            <span style={{ fontSize: 40, opacity: .3 }}>🏨</span>
-            {hasOwnSite && <span style={{ fontSize: 10, color: '#4ade80' }}>Visite o site →</span>}
-          </div>
-        )}
-        {m.distancia_km != null && (
-          <div style={{ position: 'absolute', top: 8, right: 8, background: 'rgba(0,0,0,.85)', backdropFilter: 'blur(4px)', padding: '4px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, color: '#f0ebe0', border: '1px solid rgba(255,255,255,.1)' }}>
-            📍 {fmtDist(m.distancia_km)}
-          </div>
-        )}
-      </a>
-
-      <div style={{ padding: '11px 12px' }}>
-        <a href={href} target={linkTarget} rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
-          <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: '#f0ebe0', display: 'flex', alignItems: 'center', gap: 5 }}>
-            {m.nome}
-            {hasOwnSite && <span style={{ fontSize: 11, color: '#4ade80' }}>↗</span>}
-          </div>
-        </a>
-        <div style={{ fontSize: 10, color: '#6b7280', marginBottom: 10 }}>📍 {m.cidade}, {m.estado}</div>
-
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 10, borderTop: '1px solid #252d3d' }}>
-          <div>
-            {hasOwnSite ? (
-              <a href={href} target="_blank" rel="noopener noreferrer"
-                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 12px', background: 'rgba(74,222,128,.1)', border: '1px solid rgba(74,222,128,.3)', borderRadius: 6, color: '#4ade80', fontSize: 11, fontWeight: 700, textDecoration: 'none' }}>
-                🌐 Visitar site
-              </a>
-            ) : (
-              <>
-                <div style={{ fontSize: 9, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '.5px' }}>a partir de</div>
-                <div style={{ fontFamily: 'var(--font-playfair),serif', fontSize: 22, fontWeight: 900, color: '#D4001F', lineHeight: 1.1 }}>
-                  {m.preco_inicial ? fmtBRL(m.preco_inicial) : '—'}
-                  <sub style={{ fontSize: 10, color: '#6b7280', fontFamily: 'sans-serif', fontWeight: 400 }}>/2h</sub>
-                </div>
-              </>
-            )}
-          </div>
-          <div style={{ display: 'flex', gap: 6 }}>
-            <a href={mapsLink(m.endereco, m.lat, m.lng)} target="_blank" rel="noopener"
-              style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 10px', background: 'transparent', border: '1px solid #252d3d', borderRadius: 4, color: '#6b7280', fontSize: 10, fontWeight: 600, textDecoration: 'none' }}>
-              📍 Maps
-            </a>
-            {!hasOwnSite && m.whatsapp && (
-              <a href={wppLink(m.whatsapp, m.nome)} target="_blank" rel="noopener"
-                style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 10px', background: '#075E54', borderRadius: 4, color: '#fff', fontSize: 10, fontWeight: 700, textDecoration: 'none' }}>
+              <a
+                href={wppLink(m.whatsapp, m.nome)}
+                target="_blank"
+                rel="noopener"
+                style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 10px', background: '#075E54', borderRadius: 4, color: '#fff', fontSize: 10, fontWeight: 700, textDecoration: 'none' }}
+              >
                 💬 WhatsApp
               </a>
             )}
