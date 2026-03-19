@@ -169,10 +169,22 @@ function MotelRow({ m }: { m: Motel }) {
         {m.foto_capa ? <Image src={m.foto_capa} alt={m.nome} fill style={{ objectFit:'cover' }} /> : '🏨'}
       </div>
       <div style={{ flex:1, minWidth:0 }}>
-        <div style={{ fontWeight:700, fontSize:15, marginBottom:3 }}>{m.nome}</div>
-        <div style={{ fontSize:11, color:'#d4a943', fontFamily:'monospace', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-          motelsbrasil.com.br/motel/{m.slug}
+        <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:3 }}>
+          <span style={{ fontWeight:700, fontSize:15 }}>{m.nome}</span>
+          {m.site_externo && !m.usa_builder && (
+            <span style={{ fontSize:9, fontWeight:700, color:'#4ade80', background:'rgba(74,222,128,.1)', border:'1px solid rgba(74,222,128,.2)', borderRadius:4, padding:'2px 6px', letterSpacing:'.5px' }}>GRATUITO</span>
+          )}
         </div>
+        {m.site_externo && !m.usa_builder ? (
+          <a href={m.site_externo} target="_blank" rel="noopener noreferrer"
+            style={{ fontSize:11, color:'#4ade80', fontFamily:'monospace', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', display:'block', textDecoration:'none' }}>
+            🌐 {m.site_externo.replace('https://','').replace('http://','')}
+          </a>
+        ) : (
+          <div style={{ fontSize:11, color:'#d4a943', fontFamily:'monospace', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+            motelsbrasil.com.br/motel/{m.slug}
+          </div>
+        )}
         <div style={{ fontSize:11, color:'#6b7280', marginTop:2 }}>{m.cidade}, {m.estado}</div>
       </div>
       <div style={{ display:'flex', alignItems:'center', gap:10 }}>
