@@ -85,7 +85,7 @@ export default function MotelVitrine({ motel }: Props) {
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(280px,1fr))', gap: 20 }}>
           {motel.suites?.map(suite => (
-            <SuiteCard key={suite.id} suite={suite} wpp={wpp} />
+            <SuiteCard key={suite.id} suite={suite} wpp={wpp} motelWhatsapp={motel.whatsapp} motelNome={motel.nome} />
           ))}
         </div>
 
@@ -193,7 +193,7 @@ export default function MotelVitrine({ motel }: Props) {
   )
 }
 
-function SuiteCard({ suite, wpp }: { suite: Suite; wpp: string }) {
+function SuiteCard({ suite, wpp, motelWhatsapp, motelNome }: { suite: Suite; wpp: string; motelWhatsapp?: string; motelNome: string }) {
   const [fotoIdx, setFotoIdx] = useState(0)
   const fotos = suite.fotos || []
 
@@ -238,7 +238,7 @@ function SuiteCard({ suite, wpp }: { suite: Suite; wpp: string }) {
           </div>
         )}
 
-        <a href={wpp} target="_blank" rel="noopener" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', padding: 12, background: '#075E54', color: '#fff', borderRadius: 8, fontWeight: 700, fontSize: 13, textDecoration: 'none' }}>
+        <a href={motelWhatsapp ? wppLink(motelWhatsapp, motelNome, suite.nome) : wpp} target="_blank" rel="noopener" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', padding: 12, background: '#075E54', color: '#fff', borderRadius: 8, fontWeight: 700, fontSize: 13, textDecoration: 'none' }}>
           📱 Reservar esta suíte
         </a>
       </div>

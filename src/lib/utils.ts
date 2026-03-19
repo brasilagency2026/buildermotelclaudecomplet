@@ -13,9 +13,14 @@ export function fmtDist(km: number) {
   return km < 1 ? `${Math.round(km * 1000)}m` : km < 10 ? `${km.toFixed(1)}km` : `${Math.round(km)}km`
 }
 
-export function wppLink(numero: string, motelNome: string) {
-  const n = numero.replace(/\D/g, '')
-  const msg = encodeURIComponent(`Olá! Vi o ${motelNome} no MotéisBrasil e gostaria de reservar.`)
+export function wppLink(numero: string, motelNome: string, suiteNome?: string) {
+  let n = numero.replace(/\D/g, '')
+  // Adicionar código do país 55 (Brasil) se não tiver
+  if (!n.startsWith('55') && n.length <= 11) n = '55' + n
+  const msgBase = suiteNome
+    ? `Olá! Vi a ${suiteNome} no ${motelNome} pelo MotéisBrasil e gostaria de reservar.`
+    : `Olá! Vi o ${motelNome} no MotéisBrasil e gostaria de reservar.`
+  const msg = encodeURIComponent(msgBase)
   return `https://wa.me/${n}?text=${msg}`
 }
 
