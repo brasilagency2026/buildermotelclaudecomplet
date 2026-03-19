@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { createAdminSupabase } from '@/lib/supabase-server'
 
 async function getUser(req: NextRequest) {
   const token = req.headers.get('authorization')?.replace('Bearer ', '')
@@ -21,16 +20,17 @@ export async function POST(req: NextRequest) {
     const form = await req.formData()
     const file = form.get('file') as File
     const motelId = (form.get('motel_id') as string) || 'temp'
+    if (!file) return NextResponse.json({ error: 'Nenhum arquivo' }, { status: 400 })
 
-    if (!file) return NextResponse.json({ error: 'Nenhum arquivo enviado' }, { status: 400 })
+    const admin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      { auth: { autoRefreshToken: false, persistSession: false } }
+    )
 
     const ext = file.name.split('.').pop() || 'jpg'
     const path = `${user.id}/${motelId}/${Date.now()}.${ext}`
-
-    // Usar admin para upload (bypass RLS no storage)
-    const admin = createAdminSupabase()
-    const arrayBuffer = await file.arrayBuffer()
-    const buffer = Buffer.from(arrayBuffer)
+    const buffer = Buffer.from(await file.arrayBuffer())
 
     const { data, error } = await admin.storage
       .from('motel-fotos')
@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ url: publicUrl, path: data.path })
   } catch (err: any) {
-    console.error('[POST /api/upload]', err.message)
+    console.error('[upload]', err.message)
     return NextResponse.json({ error: err.message }, { status: 500 })
   }
 }
