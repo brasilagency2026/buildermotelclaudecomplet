@@ -159,13 +159,12 @@ export default function MotelMap({ moteis, userCoords, height = 420 }: Props) {
             ${foto ? `<img src="${foto}" alt="${motel.nome}" style="width:100%;height:110px;object-fit:cover;display:block"/>` : `<div style="height:60px;display:flex;align-items:center;justify-content:center;font-size:32px;background:#0d1117">🏨</div>`}
             <div style="padding:12px">
               ${dist}
-              ${hasOwnSite ? '<div style="font-size:9px;font-weight:700;color:#4ade80;letter-spacing:1px;margin-bottom:4px">SITE PRÓPRIO</div>' : ''}
               <div style="font-weight:700;font-size:14px;color:#f0ebe0;margin-bottom:4px">${motel.nome}</div>
               <div style="font-size:11px;color:#9ca3af;margin-bottom:8px">📍 ${motel.cidade}, ${motel.estado}</div>
               ${!hasOwnSite && preco ? `<div style="font-size:13px;color:#D4001F;font-weight:700;margin-bottom:8px">a partir de ${preco}<span style="color:#6b7280;font-size:10px;font-weight:400">/2h</span></div>` : ''}
               <a href="${href}" target="${hasOwnSite ? '_blank' : '_self'}" rel="noopener noreferrer"
-                style="display:block;text-align:center;padding:7px;background:${hasOwnSite ? '#22c55e' : '#D4001F'};color:white;border-radius:6px;font-size:12px;font-weight:600;text-decoration:none">
-                ${hasOwnSite ? '🌐 Visitar site →' : 'Ver motel →'}
+                style="display:block;text-align:center;padding:7px;background:#D4001F;color:white;border-radius:6px;font-size:12px;font-weight:600;text-decoration:none">
+                Ver motel →
               </a>
             </div>
           </div>

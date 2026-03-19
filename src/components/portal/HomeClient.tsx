@@ -172,6 +172,73 @@ function MotelCard({ m }: { m: MotelCard }) {
 
   return (
     <article
+      style={{ background: '#1c2130', border: '1px solid #252d3d', borderRadius: 6, overflow: 'hidden', transition: 'transform .2s' }}
+      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)' }}
+      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(0)' }}
+    >
+      {/* Photo — clique toujours vers href */}
+      <a href={href} target={linkTarget} rel="noopener noreferrer"
+        style={{ display: 'block', position: 'relative', height: 155, overflow: 'hidden', background: '#0d0d0d', textDecoration: 'none' }}>
+        {foto ? (
+          <Image src={foto} alt={m.nome} fill style={{ objectFit: 'cover' }} sizes="320px" />
+        ) : (
+          <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 40, opacity: .2 }}>🏨</div>
+        )}
+        {m.distancia_km != null && (
+          <div style={{ position: 'absolute', top: 8, right: 8, background: 'rgba(0,0,0,.85)', backdropFilter: 'blur(4px)', padding: '4px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, color: '#f0ebe0', border: '1px solid rgba(255,255,255,.1)' }}>
+            📍 {fmtDist(m.distancia_km)}
+          </div>
+        )}
+      </a>
+
+      <div style={{ padding: '11px 12px' }}>
+        {/* Nom — lien vers href */}
+        <a href={href} target={linkTarget} rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
+          <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: '#f0ebe0' }}>
+            {m.nome}
+          </div>
+        </a>
+        <div style={{ fontSize: 10, color: '#6b7280', marginBottom: 10 }}>📍 {m.cidade}, {m.estado}</div>
+
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 10, borderTop: '1px solid #252d3d' }}>
+          <div>
+            {!hasOwnSite && (
+              <>
+                <div style={{ fontSize: 9, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '.5px' }}>a partir de</div>
+                <div style={{ fontFamily: 'var(--font-playfair),serif', fontSize: 22, fontWeight: 900, color: '#D4001F', lineHeight: 1.1 }}>
+                  {m.preco_inicial ? fmtBRL(m.preco_inicial) : '—'}
+                  <sub style={{ fontSize: 10, color: '#6b7280', fontFamily: 'sans-serif', fontWeight: 400 }}>/2h</sub>
+                </div>
+              </>
+            )}
+            {hasOwnSite && (
+              <div style={{ fontSize: 11, color: '#6b7280' }}>📍 {m.cidade}, {m.estado}</div>
+            )}
+          </div>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <a href={mapsLink(m.endereco, m.lat, m.lng)} target="_blank" rel="noopener"
+              style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 10px', background: 'transparent', border: '1px solid #252d3d', borderRadius: 4, color: '#6b7280', fontSize: 10, fontWeight: 600, textDecoration: 'none' }}>
+              📍 Maps
+            </a>
+            {!hasOwnSite && m.whatsapp && (
+              <a href={wppLink(m.whatsapp, m.nome)} target="_blank" rel="noopener"
+                style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 10px', background: '#075E54', borderRadius: 4, color: '#fff', fontSize: 10, fontWeight: 700, textDecoration: 'none' }}>
+                💬 WhatsApp
+              </a>
+            )}
+          </div>
+        </div>
+      </div>
+    </article>
+  )
+}: { m: MotelCard }) {
+  const foto = m.foto_capa || m.fotos_galeria?.[0]
+  const hasOwnSite = !!m.site_externo && !m.usa_builder
+  const href = hasOwnSite ? m.site_externo! : `/motel/${m.slug}`
+  const linkTarget = hasOwnSite ? '_blank' : '_self'
+
+  return (
+    <article
       style={{ background: '#1c2130', border: `1px solid ${hasOwnSite ? '#1a2e1a' : '#252d3d'}`, borderRadius: 6, overflow: 'hidden', transition: 'transform .2s', position: 'relative' }}
       onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)' }}
       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(0)' }}
