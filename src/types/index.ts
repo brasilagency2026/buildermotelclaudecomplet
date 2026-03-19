@@ -32,6 +32,7 @@ export interface MotelCard {
   endereco: string; whatsapp?: string; telefone?: string
   foto_capa?: string; fotos_galeria: string[]; lat?: number; lng?: number
   preco_inicial?: number; distancia_km?: number
+  site_externo?: string; usa_builder?: boolean
 }
 
 export const ESTADOS_BR = [
