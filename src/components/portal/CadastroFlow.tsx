@@ -8,7 +8,7 @@ import AddressAutocomplete from '@/components/shared/AddressAutocomplete'
 import { fetchWithAuth } from '@/lib/fetchWithAuth'
 import type { AddressResult } from '@/lib/useGoogleMapsAddress'
 
-type Step = 'auth' | 'motel' | 'success'
+type Step = 'auth' | 'verify' | 'motel' | 'success'
 
 export default function CadastroFlow() {
   const router = useRouter()
@@ -17,6 +17,8 @@ export default function CadastroFlow() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [slug, setSlug] = useState('')
+  const [isNewUser, setIsNewUser] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
 
   // Auth
   const [email, setEmail] = useState('')
@@ -49,14 +51,28 @@ export default function CadastroFlow() {
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault(); setLoading(true); setError('')
     try {
-      const { error } = await sb.auth.signUp({
+      const { data: signUpData, error } = await sb.auth.signUp({
         email, password, options: { data: { nome } }
       })
       if (error?.message?.includes('already registered')) {
+        // Usuário já existe — fazer login direto
         const { error: e2 } = await sb.auth.signInWithPassword({ email, password })
         if (e2) throw new Error('E-mail já cadastrado. Verifique sua senha.')
-      } else if (error) throw error
-      setStep('motel')
+        setIsNewUser(false)
+        setStep('motel')
+      } else if (error) {
+        throw error
+      } else {
+        // Novo usuário — verificar se precisa confirmar email
+        const needsConfirmation = !signUpData.session
+        if (needsConfirmation) {
+          setIsNewUser(true)
+          setStep('verify')
+        } else {
+          setIsNewUser(false)
+          setStep('motel')
+        }
+      }
     } catch (err: any) { setError(err.message) }
     finally { setLoading(false) }
   }
@@ -109,6 +125,59 @@ export default function CadastroFlow() {
     coordBox: { display: 'flex', gap: 8, marginTop: 8 } as React.CSSProperties,
     coordBadge: { padding: '4px 10px', background: lat ? 'rgba(74,222,128,.08)' : 'rgba(212,0,31,.06)', border: `1px solid ${lat ? 'rgba(74,222,128,.3)' : 'rgba(212,0,31,.2)'}`, borderRadius: 6, fontSize: 11, color: lat ? '#4ade80' : '#f87171' } as React.CSSProperties,
   }
+
+  if (step === 'verify') return (
+    <div style={{ maxWidth: 560, margin: '0 auto', padding: '40px 16px', textAlign: 'center' }}>
+      <div style={{ fontSize: 64, marginBottom: 20 }}>📧</div>
+      <h2 style={{ fontFamily: 'var(--font-playfair),serif', fontSize: 32, fontWeight: 900, marginBottom: 12 }}>
+        Verifique seu <span style={{ color: '#d4a943' }}>e-mail</span>
+      </h2>
+      <p style={{ fontSize: 15, color: '#6b7280', lineHeight: 1.7, marginBottom: 24 }}>
+        Enviamos um link de confirmação para<br />
+        <strong style={{ color: '#f0ebe0' }}>{email}</strong>
+      </p>
+      <div style={{ background: '#161a24', border: '1px solid #252d3d', borderRadius: 14, padding: '20px 24px', marginBottom: 28, textAlign: 'left' }}>
+        <p style={{ fontSize: 13, color: '#6b7280', lineHeight: 1.8 }}>
+          <span style={{ color: '#d4a943', fontWeight: 700 }}>1.</span> Abra seu e-mail<br />
+          <span style={{ color: '#d4a943', fontWeight: 700 }}>2.</span> Clique no link de confirmação enviado pelo MotéisBrasil<br />
+          <span style={{ color: '#d4a943', fontWeight: 700 }}>3.</span> Volte aqui e clique em <strong style={{ color: '#f0ebe0' }}>"Já confirmei meu e-mail"</strong>
+        </p>
+      </div>
+      <button
+        onClick={async () => {
+          setLoading(true); setError('')
+          try {
+            const { error } = await sb.auth.signInWithPassword({ email, password })
+            if (error) throw new Error('E-mail ainda não confirmado. Verifique sua caixa de entrada.')
+            setStep('motel')
+          } catch (err: any) { setError(err.message) }
+          finally { setLoading(false) }
+        }}
+        disabled={loading}
+        style={{ width: '100%', padding: '14px', background: 'linear-gradient(135deg,#d4a943,#f0c060)', color: '#1a1200', border: 'none', borderRadius: 10, fontWeight: 700, fontSize: 15, cursor: 'pointer', fontFamily: 'inherit', marginBottom: 12 }}
+      >
+        {loading ? '⏳ Verificando...' : '✓ Já confirmei meu e-mail →'}
+      </button>
+      {error && (
+        <div style={{ padding: '10px 14px', background: 'rgba(212,0,31,.1)', border: '1px solid rgba(212,0,31,.3)', borderRadius: 8, color: '#ff6b6b', fontSize: 13, marginBottom: 12 }}>
+          {error}
+        </div>
+      )}
+      <button
+        onClick={async () => {
+          setLoading(true); setError('')
+          try {
+            await sb.auth.resend({ type: 'signup', email })
+            setError('✅ E-mail reenviado! Verifique sua caixa de entrada.')
+          } catch { setError('Erro ao reenviar.') }
+          finally { setLoading(false) }
+        }}
+        style={{ background: 'transparent', border: 'none', color: '#6b7280', fontSize: 13, cursor: 'pointer', textDecoration: 'underline', fontFamily: 'inherit' }}
+      >
+        Não recebeu? Reenviar e-mail
+      </button>
+    </div>
+  )
 
   if (step === 'success') return (
     <div style={{ ...S.wrap, textAlign: 'center', paddingTop: 40 }}>
