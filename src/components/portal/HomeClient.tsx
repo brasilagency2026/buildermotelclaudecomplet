@@ -230,11 +230,7 @@ function MotelCard({ m }: { m: MotelCard }) {
         </div>
       </div>
     </article>
-  )
-}: { m: MotelCard }) {
-  const foto = m.foto_capa || m.fotos_galeria?.[0]
-  const hasOwnSite = !!m.site_externo && !m.usa_builder
-  const href = hasOwnSite ? m.site_externo! : `/motel/${m.slug}`
+  )`
   const linkTarget = hasOwnSite ? '_blank' : '_self'
 
   return (
