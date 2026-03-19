@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
-import { createServerSupabase } from '@/lib/supabase-server'
+import { createClient } from '@supabase/supabase-js'
 import { motelMeta } from '@/lib/utils'
 import NavBar from '@/components/shared/NavBar'
 import Footer from '@/components/shared/Footer'
@@ -10,10 +10,30 @@ interface Props { params: { slug: string } }
 
 async function getMotel(slug: string) {
   try {
-    const sb = createServerSupabase()
-    const { data } = await sb.rpc('get_motel_completo', { p_slug: slug })
-    return data
-  } catch {
+    const admin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      { auth: { autoRefreshToken: false, persistSession: false } }
+    )
+    // Buscar motel independente do status (active OU pending)
+    const { data: motel } = await admin
+      .from('moteis')
+      .select('*')
+      .eq('slug', slug)
+      .single()
+
+    if (!motel) return null
+
+    // Buscar suítes com tarifas
+    const { data: suites } = await admin
+      .from('suites')
+      .select('*, tarifas(*)')
+      .eq('motel_id', motel.id)
+      .order('ordem')
+
+    return { ...motel, suites: suites || [] }
+  } catch (err) {
+    console.error('[getMotel]', err)
     return null
   }
 }
@@ -23,8 +43,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!motel) return { title: 'Motel não encontrado' }
   const { title, description } = motelMeta(motel)
   return {
-    title,
-    description,
+    title, description,
     openGraph: {
       title, description, type: 'website', locale: 'pt_BR',
       images: motel.foto_capa ? [{ url: motel.foto_capa, width: 1200, height: 630 }] : [],
@@ -35,19 +54,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 }
 
-// Não pré-gerar páginas no build — gerar sob demanda (ISR)
 export async function generateStaticParams() {
   try {
-    const sb = createServerSupabase()
-    const { data } = await sb
-      .from('moteis')
-      .select('slug')
-      .eq('status', 'active')
-      .limit(100)
+    const admin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      { auth: { autoRefreshToken: false, persistSession: false } }
+    )
+    const { data } = await admin.from('moteis').select('slug').limit(100)
     return (data || []).map(m => ({ slug: m.slug }))
   } catch {
-    // Se Supabase não estiver disponível no build, retorna array vazio
-    // As páginas serão geradas sob demanda no primeiro acesso (ISR)
     return []
   }
 }
