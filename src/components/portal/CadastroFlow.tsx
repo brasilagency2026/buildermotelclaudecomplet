@@ -8,7 +8,7 @@ import AddressAutocomplete from '@/components/shared/AddressAutocomplete'
 import { fetchWithAuth } from '@/lib/fetchWithAuth'
 import type { AddressResult } from '@/lib/useGoogleMapsAddress'
 
-type Step = 'auth' | 'verify' | 'motel' | 'success'
+type Step = 'auth' | 'verify' | 'choose' | 'motel' | 'success'
 
 export default function CadastroFlow() {
   const router = useRouter()
@@ -18,6 +18,7 @@ export default function CadastroFlow() {
   const [error, setError] = useState('')
   const [slug, setSlug] = useState('')
   const [isNewUser, setIsNewUser] = useState(false)
+  const [wantsBuilder, setWantsBuilder] = useState<boolean | null>(null)
   const [showPassword, setShowPassword] = useState(false)
 
   // Auth
@@ -83,6 +84,10 @@ export default function CadastroFlow() {
       setError('Selecione o endereço nas sugestões do Google Maps para obter as coordenadas.')
       return
     }
+    if (wantsBuilder === false && !siteExterno) {
+      setError('Informe a URL do seu site para cadastro gratuito.')
+      return
+    }
     setLoading(true); setError('')
     try {
       const res = await fetchWithAuth('/api/moteis', {
@@ -92,7 +97,7 @@ export default function CadastroFlow() {
           nome: nomeMotel, endereco, cidade, estado, cep,
           lat, lng, whatsapp, telefone,
           site_externo: siteExterno || undefined,
-          usa_builder: !siteExterno,
+          usa_builder: wantsBuilder !== false && !siteExterno,
           fotos_galeria: [],
         }),
       })
@@ -149,7 +154,7 @@ export default function CadastroFlow() {
           try {
             const { error } = await sb.auth.signInWithPassword({ email, password })
             if (error) throw new Error('E-mail ainda não confirmado. Verifique sua caixa de entrada.')
-            setStep('motel')
+            setStep('choose')
           } catch (err: any) { setError(err.message) }
           finally { setLoading(false) }
         }}
@@ -176,6 +181,63 @@ export default function CadastroFlow() {
       >
         Não recebeu? Reenviar e-mail
       </button>
+    </div>
+  )
+
+  if (step === 'choose') return (
+    <div style={{ maxWidth: 640, margin: '0 auto', padding: '40px 16px' }}>
+      <div style={{ textAlign: 'center', marginBottom: 32 }}>
+        <div style={{ fontSize: 48, marginBottom: 12 }}>🏨</div>
+        <h2 style={{ fontFamily: 'var(--font-playfair),serif', fontSize: 28, fontWeight: 900, marginBottom: 8 }}>
+          Como deseja <span style={{ color: '#d4a943' }}>aparecer</span> no portal?
+        </h2>
+        <p style={{ fontSize: 13, color: '#6b7280', lineHeight: 1.6 }}>
+          Escolha a opção que melhor se adapta ao seu motel.
+        </p>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+        {/* Opção 1 — Já tem site */}
+        <div
+          onClick={() => { setWantsBuilder(false); setStep('motel') }}
+          style={{ background: '#161a24', border: '1px solid #252d3d', borderRadius: 16, padding: '24px 20px', cursor: 'pointer', transition: 'all .2s' }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = '#4ade80'; (e.currentTarget as HTMLElement).style.background = 'rgba(74,222,128,.04)' }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = '#252d3d'; (e.currentTarget as HTMLElement).style.background = '#161a24' }}
+        >
+          <div style={{ fontSize: 36, marginBottom: 12 }}>🌐</div>
+          <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 8, color: '#f0ebe0' }}>Já tenho site</div>
+          <p style={{ fontSize: 12, color: '#6b7280', lineHeight: 1.6, marginBottom: 16 }}>
+            Cadastre seu motel <strong style={{ color: '#4ade80' }}>gratuitamente</strong> informando o nome, endereço e o link do seu site.
+          </p>
+          <div style={{ fontSize: 11, color: '#4ade80', fontWeight: 600, padding: '5px 10px', background: 'rgba(74,222,128,.1)', border: '1px solid rgba(74,222,128,.2)', borderRadius: 6, display: 'inline-block' }}>
+            ✓ 100% gratuito
+          </div>
+        </div>
+
+        {/* Opção 2 — Criar site */}
+        <div
+          onClick={() => { setWantsBuilder(true); setStep('motel') }}
+          style={{ background: '#161a24', border: '1px solid #252d3d', borderRadius: 16, padding: '24px 20px', cursor: 'pointer', transition: 'all .2s', position: 'relative' as const }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = '#d4a943'; (e.currentTarget as HTMLElement).style.background = 'rgba(212,169,67,.04)' }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = '#252d3d'; (e.currentTarget as HTMLElement).style.background = '#161a24' }}
+        >
+          <div style={{ position: 'absolute', top: 12, right: 12, fontSize: 9, fontWeight: 700, color: '#1a1200', background: '#d4a943', borderRadius: 4, padding: '2px 8px', letterSpacing: '.5px' }}>
+            POPULAR
+          </div>
+          <div style={{ fontSize: 36, marginBottom: 12 }}>✨</div>
+          <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 8, color: '#f0ebe0' }}>Criar meu site vitrine</div>
+          <p style={{ fontSize: 12, color: '#6b7280', lineHeight: 1.6, marginBottom: 16 }}>
+            Criamos um site completo com suítes, preços e reservas diretas pelo WhatsApp.
+          </p>
+          <div style={{ fontSize: 11, color: '#d4a943', fontWeight: 600, padding: '5px 10px', background: 'rgba(212,169,67,.1)', border: '1px solid rgba(212,169,67,.2)', borderRadius: 6, display: 'inline-block' }}>
+            R$ 50/mês · cancele quando quiser
+          </div>
+        </div>
+      </div>
+
+      <p style={{ textAlign: 'center', fontSize: 11, color: '#6b7280', marginTop: 20 }}>
+        Clique na opção desejada para continuar →
+      </p>
     </div>
   )
 
@@ -292,26 +354,56 @@ export default function CadastroFlow() {
             </div>
           </div>
 
-          <div style={S.section}>
-            <div style={S.sTitle}><div style={S.num}>3</div> Site do motel</div>
-            <div style={{ marginBottom: 12 }}>
-              <label style={S.label}>URL do site (se já tiver)</label>
-              <input style={S.input} type="url" value={siteExterno} onChange={e => setSiteExterno(e.target.value)} placeholder="https://www.seumotel.com.br" />
-            </div>
-            {!siteExterno && (
-              <div style={{ background: 'rgba(212,169,67,.06)', border: '1px dashed rgba(212,169,67,.3)', borderRadius: 10, padding: '16px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-                <div>
-                  <p style={{ fontWeight: 600, fontSize: 13, marginBottom: 3 }}>Não tem site?</p>
-                  <p style={{ fontSize: 12, color: '#6b7280', lineHeight: 1.5 }}>Criaremos um site vitrine completo com suítes, preços e reservas pelo WhatsApp.<br /><span style={{ color: '#d4a943', fontWeight: 600 }}>R$ 50/mês</span> — cancele quando quiser.</p>
-                </div>
-                <span style={{ fontSize: 12, color: '#d4a943', fontWeight: 600, whiteSpace: 'nowrap' }}>✨ Criado no próximo passo</span>
+          {/* Seção site — adaptada ao tipo de cadastro */}
+          {wantsBuilder === false && (
+            <div style={S.section}>
+              <div style={S.sTitle}><div style={S.num}>3</div> URL do seu site *</div>
+              <div style={{ marginBottom: 8 }}>
+                <label style={S.label}>Link do seu site (obrigatório)</label>
+                <input
+                  style={S.input}
+                  type="url"
+                  value={siteExterno}
+                  onChange={e => setSiteExterno(e.target.value)}
+                  placeholder="https://www.seumotel.com.br"
+                  required
+                />
+                <p style={{ fontSize: 11, color: '#6b7280', marginTop: 6, lineHeight: 1.5 }}>
+                  Os visitantes serão redirecionados para o seu site ao clicar no seu motel.
+                </p>
               </div>
-            )}
-          </div>
+              <div style={{ background: 'rgba(74,222,128,.06)', border: '1px solid rgba(74,222,128,.2)', borderRadius: 8, padding: '10px 14px', fontSize: 12, color: '#4ade80', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span>✓</span> Cadastro 100% gratuito — sem mensalidade
+              </div>
+            </div>
+          )}
+
+          {wantsBuilder === true && (
+            <div style={S.section}>
+              <div style={S.sTitle}><div style={S.num}>3</div> Site vitrine</div>
+              <div style={{ background: 'rgba(212,169,67,.06)', border: '1px dashed rgba(212,169,67,.3)', borderRadius: 10, padding: '16px 18px' }}>
+                <p style={{ fontWeight: 700, fontSize: 14, marginBottom: 6, color: '#d4a943' }}>✨ Seu site será criado no próximo passo</p>
+                <p style={{ fontSize: 12, color: '#6b7280', lineHeight: 1.6 }}>
+                  Incluirá fotos, suítes, preços e botão de reserva pelo WhatsApp.<br />
+                  <span style={{ color: '#d4a943', fontWeight: 600 }}>R$ 50/mês</span> — cancele quando quiser.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {wantsBuilder === null && (
+            <div style={S.section}>
+              <div style={S.sTitle}><div style={S.num}>3</div> Site do motel</div>
+              <div style={{ marginBottom: 12 }}>
+                <label style={S.label}>URL do site (se já tiver)</label>
+                <input style={S.input} type="url" value={siteExterno} onChange={e => setSiteExterno(e.target.value)} placeholder="https://www.seumotel.com.br" />
+              </div>
+            </div>
+          )}
 
           {error && <div style={S.err}>{error}</div>}
           <button style={S.btn} disabled={loading}>
-            {loading ? '⏳ Cadastrando...' : siteExterno ? 'Cadastrar no portal →' : 'Cadastrar e criar meu site →'}
+            {loading ? '⏳ Cadastrando...' : wantsBuilder === false ? '✓ Cadastrar gratuitamente →' : wantsBuilder === true ? 'Cadastrar e criar meu site →' : siteExterno ? 'Cadastrar no portal →' : 'Cadastrar e criar meu site →'}
           </button>
         </form>
       )}
