@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-const createAdminSupabase = () => createClient(
+import { makeSlug } from '@/lib/utils'
+
+const adminClient = () => createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
   { auth: { autoRefreshToken: false, persistSession: false } }
 )
-import { createClient } from '@supabase/supabase-js'
-import { makeSlug } from '@/lib/utils'
 
 async function getUser(req: NextRequest) {
   const token = req.headers.get('authorization')?.replace('Bearer ', '')
@@ -25,15 +25,13 @@ export async function POST(req: NextRequest) {
     if (!user) return NextResponse.json({ error: 'Não autorizado. Faça login novamente.' }, { status: 401 })
 
     const dados = await req.json()
-    const admin = createAdminSupabase()
+    const admin = adminClient()
 
-    // Garantir owner existe
     await admin.from('owners').upsert(
       { id: user.id, email: user.email },
       { onConflict: 'id' }
     )
 
-    // Slug único
     let slug = makeSlug(
       dados.nome || 'motel',
       dados.estado || 'br',
@@ -73,7 +71,7 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   const { searchParams: sp } = new URL(req.url)
-  const admin = createAdminSupabase()
+  const admin = adminClient()
   const { data, error } = await admin.rpc('search_moteis', {
     p_busca:  sp.get('q')      || null,
     p_estado: sp.get('estado') || null,
@@ -92,7 +90,7 @@ export async function PUT(req: NextRequest) {
     const user = await getUser(req)
     if (!user) return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 })
     const { id, ...dados } = await req.json()
-    const admin = createAdminSupabase()
+    const admin = adminClient()
     const { data, error } = await admin
       .from('moteis').update(dados)
       .eq('id', id).eq('owner_id', user.id)
