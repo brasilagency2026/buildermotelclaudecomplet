@@ -60,7 +60,19 @@ export default function CadastroFlow() {
         const { error: e2 } = await sb.auth.signInWithPassword({ email, password })
         if (e2) throw new Error('E-mail já cadastrado. Verifique sua senha.')
         setIsNewUser(false)
-        setStep('motel')
+        // Verificar se já tem motel — redirecionar para dashboard
+        const { data: { session } } = await sb.auth.getSession()
+        if (session) {
+          const res = await fetch('/api/moteis/meu', {
+            headers: { 'Authorization': `Bearer ${session.access_token}` }
+          })
+          const data = await res.json()
+          if (data.motel) {
+            router.push(`/dashboard/editar/${data.motel.id}`)
+            return
+          }
+        }
+        setStep('choose')
       } else if (error) {
         throw error
       } else {
