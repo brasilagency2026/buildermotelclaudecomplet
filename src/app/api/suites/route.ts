@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createAdminSupabase } from '@/lib/supabase-server'
 import { createClient } from '@supabase/supabase-js'
+
+const admin = () => createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  { auth: { autoRefreshToken: false, persistSession: false } }
+)
 
 async function getUser(req: NextRequest) {
   const token = req.headers.get('authorization')?.replace('Bearer ', '')
@@ -19,22 +24,23 @@ export async function POST(req: NextRequest) {
     if (!user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
     const { motel_id, suites } = await req.json()
-    const admin = createAdminSupabase()
+    const db = admin()
 
     // Verificar ownership
-    const { data: motel } = await admin
+    const { data: motel } = await db
       .from('moteis').select('id, paypal_status')
       .eq('id', motel_id).eq('owner_id', user.id).single()
     if (!motel) return NextResponse.json({ error: 'Motel não encontrado' }, { status: 404 })
 
     // Apagar suítes antigas
-    await admin.from('suites').delete().eq('motel_id', motel_id)
+    await db.from('suites').delete().eq('motel_id', motel_id)
 
-    // Inserir novas
+    // Inserir novas suítes
     for (let i = 0; i < suites.length; i++) {
       const s = suites[i]
       if (!s.nome) continue
-      const { data: suite } = await admin.from('suites').insert({
+
+      const { data: suite, error: suiteError } = await db.from('suites').insert({
         motel_id,
         nome: s.nome,
         descricao: s.descricao || null,
@@ -43,9 +49,13 @@ export async function POST(req: NextRequest) {
         ordem: i,
       }).select().single()
 
-      if (!suite || !s.tarifas?.length) continue
+      if (suiteError) {
+        console.error('[suites] insert error:', suiteError.message)
+        continue
+      }
+      if (!suite) continue
 
-      const tarifasValidas = s.tarifas
+      const tarifasValidas = (s.tarifas || [])
         .filter((t: any) => t.periodo && parseFloat(t.preco) > 0)
         .map((t: any, j: number) => ({
           suite_id: suite.id,
@@ -54,17 +64,19 @@ export async function POST(req: NextRequest) {
           ordem: j,
         }))
 
-      if (tarifasValidas.length) {
-        await admin.from('tarifas').insert(tarifasValidas)
+      if (tarifasValidas.length > 0) {
+        const { error: tarifaError } = await db.from('tarifas').insert(tarifasValidas)
+        if (tarifaError) console.error('[tarifas] insert error:', tarifaError.message)
       }
     }
 
     // Ativar motel se PayPal ativo
-    if (motel.paypal_status === 'active') {
-      await admin.from('moteis').update({ status: 'active' }).eq('id', motel_id)
-    }
+    const newStatus = motel.paypal_status === 'active' ? 'active' : 'pending'
+    await db.from('moteis').update({ status: newStatus }).eq('id', motel_id)
 
+    console.log('[suites] saved successfully for motel:', motel_id)
     return NextResponse.json({ ok: true })
+
   } catch (err: any) {
     console.error('[POST /api/suites]', err.message)
     return NextResponse.json({ error: err.message }, { status: 500 })
