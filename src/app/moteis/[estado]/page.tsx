@@ -14,10 +14,13 @@ const ESTADOS: Record<string, string> = {
 }
 
 function normalizeStr(s: string) {
-  return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
+  return s.toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
 }
 
-export async function generateStaticParams() {
+// Sempre gerar os 27 estados — sem chamada Supabase no build
+export function generateStaticParams() {
   return Object.keys(ESTADOS).map(uf => ({ estado: uf }))
 }
 
@@ -39,22 +42,26 @@ export default async function EstadoPage({ params }: { params: { estado: string 
   const nomeEstado = ESTADOS[params.estado.toLowerCase()]
   if (!nomeEstado) notFound()
 
-  const admin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  )
+  let cidades: [string, number][] = []
+  try {
+    const admin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      { auth: { autoRefreshToken: false, persistSession: false } }
+    )
+    const { data } = await admin
+      .from('moteis').select('cidade')
+      .eq('status', 'active')
+      .ilike('estado', params.estado.toUpperCase())
 
-  const { data } = await admin
-    .from('moteis').select('cidade').eq('status', 'active')
-    .ilike('estado', params.estado.toUpperCase())
-
-  // Agrupar por cidade com contagem
-  const cidadesMap: Record<string, number> = {}
-  ;(data || []).forEach(m => {
-    cidadesMap[m.cidade] = (cidadesMap[m.cidade] || 0) + 1
-  })
-  const cidades = Object.entries(cidadesMap).sort((a, b) => b[1] - a[1])
+    const cidadesMap: Record<string, number> = {}
+    ;(data || []).forEach(m => {
+      cidadesMap[m.cidade] = (cidadesMap[m.cidade] || 0) + 1
+    })
+    cidades = Object.entries(cidadesMap).sort((a, b) => b[1] - a[1])
+  } catch {
+    cidades = []
+  }
 
   return (
     <>
@@ -66,7 +73,7 @@ export default async function EstadoPage({ params }: { params: { estado: string 
           </h1>
           <p style={{ color: '#6b7280', fontSize: 15, maxWidth: 480, margin: '0 auto' }}>
             {cidades.length > 0
-              ? `${cidades.length} cidades com motéis em ${nomeEstado}. Selecione a cidade desejada.`
+              ? `${cidades.length} cidade${cidades.length > 1 ? 's' : ''} com motéis em ${nomeEstado}.`
               : `Seja o primeiro motel em ${nomeEstado} no maior portal do Brasil.`}
           </p>
         </section>
@@ -76,10 +83,7 @@ export default async function EstadoPage({ params }: { params: { estado: string 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
               {cidades.map(([cidade, count]) => (
                 <a key={cidade} href={`/moteis/${params.estado}/${normalizeStr(cidade)}`}
-                  style={{ background: '#161a24', border: '1px solid #252d3d', borderRadius: 10, padding: '16px 20px', textDecoration: 'none', display: 'block', transition: 'border-color .2s' }}
-                  onMouseEnter={(e: any) => e.currentTarget.style.borderColor = '#D4001F'}
-                  onMouseLeave={(e: any) => e.currentTarget.style.borderColor = '#252d3d'}
-                >
+                  style={{ background: '#161a24', border: '1px solid #252d3d', borderRadius: 10, padding: '16px 20px', textDecoration: 'none', display: 'block' }}>
                   <div style={{ fontWeight: 700, fontSize: 15, color: '#f0ebe0', marginBottom: 4 }}>{cidade}</div>
                   <div style={{ fontSize: 12, color: '#6b7280' }}>{count} motel{count > 1 ? 's' : ''}</div>
                 </a>

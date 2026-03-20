@@ -77,28 +77,12 @@ async function getOutrasCidades(estado: string, cidadeAtual: string) {
   } catch { return [] }
 }
 
-export async function generateStaticParams() {
-  try {
-    const { data } = await adminClient()
-      .from('moteis').select('estado, cidade').eq('status', 'active')
-    const seen = new Set<string>()
-    const result: { estado: string; cidade: string }[] = []
-    ;(data || []).forEach(m => {
-      const key = `${m.estado.toLowerCase()}-${normalizeStr(m.cidade)}`
-      if (!seen.has(key)) {
-        seen.add(key)
-        result.push({ estado: m.estado.toLowerCase(), cidade: normalizeStr(m.cidade) })
-      }
-    })
-    // Ajouter les 27 capitales
-    Object.entries(ESTADOS).forEach(([uf, info]) => {
-      const key = `${uf}-${info.capitalSlug}`
-      if (!seen.has(key)) { seen.add(key); result.push({ estado: uf, cidade: info.capitalSlug }) }
-    })
-    return result
-  } catch {
-    return Object.entries(ESTADOS).map(([uf, info]) => ({ estado: uf, cidade: info.capitalSlug }))
-  }
+// Pré-gerar apenas as 27 capitais no build — outras cidades geradas sob demanda (ISR)
+export function generateStaticParams() {
+  return Object.entries(ESTADOS).map(([uf, info]) => ({
+    estado: uf,
+    cidade: info.capitalSlug,
+  }))
 }
 
 export async function generateMetadata({ params }: { params: { estado: string; cidade: string } }): Promise<Metadata> {
