@@ -61,11 +61,9 @@ export async function POST(req: NextRequest) {
 
     if (error) throw new Error(error.message)
     // Revalidar sitemap quando motel fica ativo
-    if (motelData.status === 'active') {
-      try {
-        const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || ''
-        await fetch(`${siteUrl}/api/revalidate-sitemap`, { method: 'POST' }).catch(() => {})
-      } catch {}
+    if (motel?.status === 'active') {
+      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || ''
+      fetch(`${siteUrl}/api/revalidate-sitemap`, { method: 'POST' }).catch(() => {})
     }
 
     return NextResponse.json({ motel, slug })
