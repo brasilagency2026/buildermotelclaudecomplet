@@ -73,32 +73,104 @@ export default async function MotelPage({ params }: Props) {
   const motel = await getMotel(params.slug)
   if (!motel) notFound()
 
+  const base = process.env.NEXT_PUBLIC_SITE_URL || ''
+  const allServices = [...new Set(
+    (motel.suites || []).flatMap(s => (s.servicos || '').split(',').map((x: string) => x.trim()).filter(Boolean))
+  )]
+  const allPrices = (motel.suites || []).flatMap(s => (s.tarifas || []).map((t: any) => t.preco))
+  const priceMin = allPrices.length ? Math.min(...allPrices) : null
+  const priceMax = allPrices.length ? Math.max(...allPrices) : null
+
+  // Schema.org enrichi
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'LodgingBusiness',
+    '@id': `${base}/motel/${motel.slug}`,
     name: motel.nome,
     description: motel.descricao,
+    url: `${base}/motel/${motel.slug}`,
+    telephone: motel.telefone,
+    image: motel.foto_capa,
+    priceRange: priceMin ? `R$${priceMin} - R$${priceMax}` : undefined,
+    currenciesAccepted: 'BRL',
+    openingHours: 'Mo-Su 00:00-24:00',
     address: {
       '@type': 'PostalAddress',
       streetAddress: motel.endereco,
       addressLocality: motel.cidade,
       addressRegion: motel.estado,
       addressCountry: 'BR',
+      postalCode: motel.cep,
     },
-    telephone: motel.telefone,
-    url: `${process.env.NEXT_PUBLIC_SITE_URL}/motel/${motel.slug}`,
     ...(motel.lat && motel.lng ? {
       geo: { '@type': 'GeoCoordinates', latitude: motel.lat, longitude: motel.lng }
     } : {}),
-    ...(motel.foto_capa ? { image: motel.foto_capa } : {}),
+    amenityFeature: allServices.map(s => ({
+      '@type': 'LocationFeatureSpecification',
+      name: s, value: true,
+    })),
+    hasOfferCatalog: motel.suites?.length ? {
+      '@type': 'OfferCatalog',
+      name: 'Suítes',
+      itemListElement: motel.suites.map((s: any) => ({
+        '@type': 'Offer',
+        name: s.nome,
+        description: s.descricao,
+        image: s.fotos?.[0],
+        priceSpecification: s.tarifas?.map((t: any) => ({
+          '@type': 'UnitPriceSpecification',
+          price: t.preco,
+          priceCurrency: 'BRL',
+          unitText: t.periodo,
+        })),
+      })),
+    } : undefined,
+  }
+
+  // FAQ Schema — crucial para LLMs
+  const faqLd = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: [
+      {
+        '@type': 'Question',
+        name: `Como reservar no ${motel.nome}?`,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: `Para reservar no ${motel.nome}, clique no botão WhatsApp na página e envie uma mensagem diretamente ao estabelecimento. Localizado em ${motel.endereco}, ${motel.cidade}, ${motel.estado}.`,
+        }
+      },
+      ...(priceMin ? [{
+        '@type': 'Question',
+        name: `Qual o preço das suítes no ${motel.nome}?`,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: `Os preços no ${motel.nome} começam a partir de R$${priceMin}. ${motel.suites?.map((s: any) => `A ${s.nome} custa a partir de R$${Math.min(...(s.tarifas?.map((t: any) => t.preco) || [0]))}`).join('. ')}.`,
+        }
+      }] : []),
+      {
+        '@type': 'Question',
+        name: `Onde fica o ${motel.nome}?`,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: `O ${motel.nome} está localizado em ${motel.endereco}, ${motel.cidade}, ${motel.estado}, Brasil.${motel.lat ? ` Coordenadas GPS: ${motel.lat}, ${motel.lng}.` : ''}`,
+        }
+      },
+      ...(allServices.includes('Hidromassagem') ? [{
+        '@type': 'Question',
+        name: `O ${motel.nome} tem hidromassagem?`,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: `Sim, o ${motel.nome} oferece suítes com hidromassagem.`,
+        }
+      }] : []),
+    ].filter(Boolean),
   }
 
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-      />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }} />
       <MotelVitrine motel={motel} />
     </>
   )
