@@ -75,6 +75,17 @@ export async function POST(req: NextRequest) {
     await db.from('moteis').update({ status: newStatus }).eq('id', motel_id)
 
     console.log('[suites] saved successfully for motel:', motel_id)
+
+    // Revalidar a página vitrine imediatamente
+    try {
+      const { revalidatePath } = await import('next/cache')
+      const { data: m } = await db.from('moteis').select('slug').eq('id', motel_id).single()
+      if (m?.slug) {
+        revalidatePath(`/motel/${m.slug}`)
+        revalidatePath('/')
+      }
+    } catch {}
+
     return NextResponse.json({ ok: true })
 
   } catch (err: any) {

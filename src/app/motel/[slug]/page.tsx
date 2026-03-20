@@ -66,7 +66,7 @@ export async function generateStaticParams() {
   }
 }
 
-export const revalidate = 300
+export const revalidate = 0  // Toujours fraîche — données critiques
 export const dynamicParams = true
 
 export default async function MotelPage({ params }: Props) {

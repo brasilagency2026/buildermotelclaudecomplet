@@ -203,6 +203,17 @@ export default function BuilderForm({ motel, userId }: Props) {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
+
+      // Forcer revalidation immédiate de la page vitrine
+      try {
+        const motelRes = await fetchWithAuth('/api/moteis', { method: 'GET' })
+        // Récupérer le slug do motel para revalidar
+        const slugRes = await fetchWithAuth(`/api/revalidate`, {
+          method: 'POST',
+          body: JSON.stringify({ slug: motel?.slug || `${nome.toLowerCase().replace(/\s+/g, '-')}-${estado.toLowerCase()}-${cidade.toLowerCase().replace(/\s+/g, '-')}` }),
+        })
+      } catch {}
+
       router.push('/dashboard?pub=1')
     } catch (err: any) {
       setError(err.message)
