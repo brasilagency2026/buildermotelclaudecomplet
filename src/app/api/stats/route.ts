@@ -19,8 +19,8 @@ export async function GET() {
     const total = data?.length || 0
     const premium = data?.filter(m => m.usa_builder).length || 0
     const gratuito = data?.filter(m => !m.usa_builder).length || 0
-    const estados = [...new Set(data?.map(m => m.estado) || [])]
-    const cidades = [...new Set(data?.map(m => m.cidade) || [])]
+    const estados = Array.from(new Set(data?.map(m => m.estado) || []))
+    const cidades = Array.from(new Set(data?.map(m => m.cidade) || []))
 
     return NextResponse.json({
       total_moteis: total,
