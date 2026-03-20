@@ -1,8 +1,8 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
+import { useSearchParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import Image from 'next/image'
-import Link from 'next/link'
 import { fmtBRL, fmtDist, wppLink, mapsLink } from '@/lib/utils'
 import type { MotelCard } from '@/types'
 
@@ -18,7 +18,7 @@ const MotelMap = dynamic(() => import('./MotelMap'), {
 const SERVICOS = ['Hidromassagem', 'Sauna', 'Piscina', 'Lareira', 'Wi-Fi', 'TV Smart']
 
 export default function HomeClient({ initialMoteis }: { initialMoteis: MotelCard[] }) {
-  const sp = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null
+  const sp = useSearchParams()
   const [moteis, setMoteis] = useState(initialMoteis)
   const [loading, setLoading] = useState(false)
   const [geoLoading, setGeoLoading] = useState(false)
@@ -26,24 +26,26 @@ export default function HomeClient({ initialMoteis }: { initialMoteis: MotelCard
   const [geoError, setGeoError] = useState('')
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null)
   const [activeFilters, setActiveFilters] = useState<string[]>([])
+  const [searchActive, setSearchActive] = useState(false)
 
-  const fetchMoteis = useCallback(async (lat?: number, lng?: number, filters?: string[]) => {
+  const fetchMoteis = useCallback(async (opts: {
+    lat?: number
+    lng?: number
+    filters?: string[]
+    q?: string
+    estado?: string
+  } = {}) => {
     setLoading(true)
     try {
-      const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams()
       const params = new URLSearchParams()
-      if (urlParams.get('q')) params.set('q', urlParams.get('q')!)
-      if (urlParams.get('estado')) params.set('estado', urlParams.get('estado')!)
-      const urlLat = urlParams.get('lat')
-      const urlLng = urlParams.get('lng')
-      const useLat = lat || (urlLat ? parseFloat(urlLat) : undefined)
-      const useLng = lng || (urlLng ? parseFloat(urlLng) : undefined)
-      if (useLat) params.set('lat', String(useLat))
-      if (useLng) params.set('lng', String(useLng))
+      if (opts.q) params.set('q', opts.q)
+      if (opts.estado) params.set('estado', opts.estado)
+      if (opts.lat) params.set('lat', String(opts.lat))
+      if (opts.lng) params.set('lng', String(opts.lng))
       const res = await fetch(`/api/moteis?${params}`)
       const data = await res.json()
       let list: MotelCard[] = data.moteis || []
-      const f = filters ?? activeFilters
+      const f = opts.filters ?? activeFilters
       if (f.length) list = list.filter(m => f.every(s => (m as any).servicos?.includes(s)))
       setMoteis(list)
     } finally {
@@ -51,20 +53,37 @@ export default function HomeClient({ initialMoteis }: { initialMoteis: MotelCard
     }
   }, [activeFilters])
 
+  // Reagir aos parâmetros da URL (busca do HeroSearch)
   useEffect(() => {
-    if (!navigator?.geolocation) return
-    setGeoLoading(true)
-    navigator.geolocation.getCurrentPosition(
-      ({ coords: { latitude: lat, longitude: lng } }) => {
-        setUserCoords({ lat, lng })
-        setGeoActive(true)
-        setGeoLoading(false)
-        fetchMoteis(lat, lng)
-      },
-      () => setGeoLoading(false),
-      { timeout: 8000, maximumAge: 300000 }
-    )
-  }, [])
+    const q = sp.get('q')
+    const estado = sp.get('estado')
+    const lat = sp.get('lat') ? parseFloat(sp.get('lat')!) : undefined
+    const lng = sp.get('lng') ? parseFloat(sp.get('lng')!) : undefined
+
+    if (q || estado || lat) {
+      // Tem parâmetros de busca — usar eles
+      setSearchActive(true)
+      setGeoActive(false)
+      if (lat && lng) setUserCoords({ lat, lng })
+      fetchMoteis({ q: q || undefined, estado: estado || undefined, lat, lng })
+    } else {
+      // Sem parâmetros — geolocalização automática
+      setSearchActive(false)
+      if (!geoActive && navigator?.geolocation) {
+        setGeoLoading(true)
+        navigator.geolocation.getCurrentPosition(
+          ({ coords: { latitude: lt, longitude: lg } }) => {
+            setUserCoords({ lat: lt, lng: lg })
+            setGeoActive(true)
+            setGeoLoading(false)
+            fetchMoteis({ lat: lt, lng: lg })
+          },
+          () => setGeoLoading(false),
+          { timeout: 8000, maximumAge: 300000 }
+        )
+      }
+    }
+  }, [sp])
 
   const requestLocation = () => {
     setGeoLoading(true); setGeoError('')
@@ -73,7 +92,7 @@ export default function HomeClient({ initialMoteis }: { initialMoteis: MotelCard
         setUserCoords({ lat, lng })
         setGeoActive(true)
         setGeoLoading(false)
-        fetchMoteis(lat, lng)
+        fetchMoteis({ lat, lng })
       },
       err => {
         setGeoLoading(false)
@@ -86,19 +105,37 @@ export default function HomeClient({ initialMoteis }: { initialMoteis: MotelCard
   const toggleFilter = (f: string) => {
     const next = activeFilters.includes(f) ? activeFilters.filter(x => x !== f) : [...activeFilters, f]
     setActiveFilters(next)
-    fetchMoteis(userCoords?.lat, userCoords?.lng, next)
+    const q = sp.get('q') || undefined
+    const estado = sp.get('estado') || undefined
+    const lat = sp.get('lat') ? parseFloat(sp.get('lat')!) : userCoords?.lat
+    const lng = sp.get('lng') ? parseFloat(sp.get('lng')!) : userCoords?.lng
+    fetchMoteis({ q, estado, lat, lng, filters: next })
   }
+
+  const q = sp.get('q')
+  const estado = sp.get('estado')
 
   return (
     <>
       <div style={{ maxWidth: 1180, margin: '0 auto', padding: '0 20px' }}>
+        {/* Banner busca ativa */}
+        {searchActive && (q || estado) && (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', background: 'rgba(212,0,31,.06)', border: '1px solid rgba(212,0,31,.2)', borderRadius: 8, marginBottom: 12, fontSize: 13 }}>
+            <span style={{ color: '#ff6b6b' }}>
+              🔍 Buscando: {[q, estado].filter(Boolean).join(' · ')}
+            </span>
+            <a href="/" style={{ fontSize: 11, color: '#6b7280', textDecoration: 'none' }}>
+              ✕ Limpar busca
+            </a>
+          </div>
+        )}
         {geoLoading && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', background: 'rgba(212,169,67,.06)', border: '1px solid rgba(212,169,67,.2)', borderRadius: 8, marginBottom: 12, fontSize: 13, color: '#d4a943' }}>
             <span style={{ animation: 'spin 1s linear infinite', display: 'inline-block' }}>⏳</span>
             Detectando sua localização...
           </div>
         )}
-        {geoActive && !geoLoading && (
+        {geoActive && !geoLoading && !searchActive && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', background: 'rgba(74,222,128,.06)', border: '1px solid rgba(74,222,128,.2)', borderRadius: 8, marginBottom: 12, fontSize: 12, color: '#4ade80' }}>
             <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#4ade80', display: 'inline-block' }} />
             Mostrando motéis mais próximos de você — ordenados por distância
@@ -108,7 +145,7 @@ export default function HomeClient({ initialMoteis }: { initialMoteis: MotelCard
 
       <section style={{ maxWidth: 1180, margin: '0 auto', padding: '0 20px 40px' }}>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 20, paddingBottom: 16, borderBottom: '1px solid #1e1e1e' }}>
-          {!geoActive && !geoLoading && (
+          {!geoActive && !geoLoading && !searchActive && (
             <button onClick={requestLocation} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px', background: 'rgba(212,0,31,.06)', border: '1px solid rgba(212,0,31,.3)', borderRadius: 4, color: '#ff4458', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
               📍 Usar minha localização
             </button>
@@ -124,7 +161,7 @@ export default function HomeClient({ initialMoteis }: { initialMoteis: MotelCard
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
           <h2 style={{ fontFamily: 'var(--font-playfair),serif', fontSize: 20, fontWeight: 900, display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ display: 'inline-block', width: 3, height: 16, background: '#D4001F', borderRadius: 2 }} />
-            {geoActive ? '📍 Motéis Próximos a Você' : 'Motéis Disponíveis'}
+            {searchActive ? 'Resultados da busca' : geoActive ? '📍 Motéis Próximos a Você' : 'Motéis Disponíveis'}
           </h2>
           <span style={{ fontSize: 11, color: '#6b7280' }}>
             {loading ? 'Buscando...' : `${moteis.length} encontrados`}
@@ -140,13 +177,8 @@ export default function HomeClient({ initialMoteis }: { initialMoteis: MotelCard
         ) : moteis.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '60px 20px', color: '#6b7280' }}>
             <div style={{ fontSize: 48, marginBottom: 12 }}>🔍</div>
-            <p>Nenhum motel encontrado.</p>
-            <button
-              onClick={() => { setActiveFilters([]); fetchMoteis(userCoords?.lat, userCoords?.lng, []) }}
-              style={{ marginTop: 12, color: '#D4001F', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, textDecoration: 'underline', fontFamily: 'inherit' }}
-            >
-              Limpar filtros
-            </button>
+            <p style={{ marginBottom: 8 }}>Nenhum motel encontrado{q ? ` para "${q}"` : ''}.</p>
+            <a href="/" style={{ color: '#D4001F', fontSize: 13, textDecoration: 'none' }}>← Ver todos os motéis</a>
           </div>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(300px,1fr))', gap: 12 }}>
@@ -182,19 +214,9 @@ function MotelCard({ m }: { m: MotelCard }) {
   const linkTarget = hasOwnSite ? '_blank' : '_self'
 
   return (
-    <article style={{
-      background: '#1c2130',
-      border: '1px solid #252d3d',
-      borderRadius: 6,
-      overflow: 'hidden',
-      transition: 'transform .2s',
-    }}>
-      <a
-        href={href}
-        target={linkTarget}
-        rel="noopener noreferrer"
-        style={{ display: 'block', position: 'relative', height: 155, overflow: 'hidden', background: '#0d0d0d', textDecoration: 'none' }}
-      >
+    <article style={{ background: '#1c2130', border: '1px solid #252d3d', borderRadius: 6, overflow: 'hidden', transition: 'transform .2s' }}>
+      <a href={href} target={linkTarget} rel="noopener noreferrer"
+        style={{ display: 'block', position: 'relative', height: 155, overflow: 'hidden', background: '#0d0d0d', textDecoration: 'none' }}>
         {foto ? (
           <Image src={foto} alt={m.nome} fill style={{ objectFit: 'cover' }} sizes="320px" />
         ) : (
@@ -206,17 +228,11 @@ function MotelCard({ m }: { m: MotelCard }) {
           </div>
         )}
       </a>
-
       <div style={{ padding: '11px 12px' }}>
         <a href={href} target={linkTarget} rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
-          <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: '#f0ebe0' }}>
-            {m.nome}
-          </div>
+          <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: '#f0ebe0' }}>{m.nome}</div>
         </a>
-        <div style={{ fontSize: 10, color: '#6b7280', marginBottom: 10 }}>
-          📍 {m.cidade}, {m.estado}
-        </div>
-
+        <div style={{ fontSize: 10, color: '#6b7280', marginBottom: 10 }}>📍 {m.cidade}, {m.estado}</div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 10, borderTop: '1px solid #252d3d' }}>
           <div>
             {!hasOwnSite && (
@@ -230,21 +246,13 @@ function MotelCard({ m }: { m: MotelCard }) {
             )}
           </div>
           <div style={{ display: 'flex', gap: 6 }}>
-            <a
-              href={mapsLink(m.endereco, m.lat, m.lng)}
-              target="_blank"
-              rel="noopener"
-              style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 10px', background: 'transparent', border: '1px solid #252d3d', borderRadius: 4, color: '#6b7280', fontSize: 10, fontWeight: 600, textDecoration: 'none' }}
-            >
+            <a href={mapsLink(m.endereco, m.lat, m.lng)} target="_blank" rel="noopener"
+              style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 10px', background: 'transparent', border: '1px solid #252d3d', borderRadius: 4, color: '#6b7280', fontSize: 10, fontWeight: 600, textDecoration: 'none' }}>
               📍 Maps
             </a>
             {!hasOwnSite && m.whatsapp && (
-              <a
-                href={wppLink(m.whatsapp, m.nome)}
-                target="_blank"
-                rel="noopener"
-                style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 10px', background: '#075E54', borderRadius: 4, color: '#fff', fontSize: 10, fontWeight: 700, textDecoration: 'none' }}
-              >
+              <a href={wppLink(m.whatsapp, m.nome)} target="_blank" rel="noopener"
+                style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 10px', background: '#075E54', borderRadius: 4, color: '#fff', fontSize: 10, fontWeight: 700, textDecoration: 'none' }}>
                 💬 WhatsApp
               </a>
             )}
