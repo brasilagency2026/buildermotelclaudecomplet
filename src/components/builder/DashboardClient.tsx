@@ -1,9 +1,10 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
+import { fetchWithAuth } from '@/lib/fetchWithAuth'
 import type { Motel } from '@/types'
 
 interface Props { moteis: Motel[]; userEmail: string }
@@ -11,6 +12,26 @@ interface Props { moteis: Motel[]; userEmail: string }
 export default function DashboardClient({ moteis, userEmail }: Props) {
   const router = useRouter()
   const sb = createClient()
+
+  const sp = useSearchParams()
+
+  // Gérer le retour de PayPal
+  useEffect(() => {
+    const subStatus = sp.get('sub')
+    const motelId = sp.get('motel_id')
+    if (subStatus === 'success' && motelId) {
+      // Activer le motel immédiatement
+      fetchWithAuth('/api/paypal/success', {
+        method: 'POST',
+        body: JSON.stringify({ motel_id: motelId }),
+      }).then(res => res.json()).then(() => {
+        // Recharger la page sans les params PayPal
+        router.replace('/dashboard')
+      }).catch(() => {
+        router.replace('/dashboard')
+      })
+    }
+  }, [sp])
 
   const signOut = async () => {
     await sb.auth.signOut()

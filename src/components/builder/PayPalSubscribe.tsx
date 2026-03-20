@@ -6,7 +6,7 @@ interface Props {
   motelId: string
   alreadyActive: boolean
   onSuccess: () => void
-  onSaveFirst?: () => Promise<string | null>  // callback para salvar motel antes do PayPal
+  onSaveFirst?: () => Promise<string | null>  // salva motel + suítes antes do PayPal
 }
 
 export default function PayPalSubscribe({ motelId, alreadyActive, onSuccess, onSaveFirst }: Props) {
@@ -106,7 +106,7 @@ export default function PayPalSubscribe({ motelId, alreadyActive, onSuccess, onS
         }}
       >
         <span style={{ fontSize: 20 }}>🅿</span>
-        {loading ? 'Processando...' : 'Assinar com PayPal — R$ 50/mês'}
+        {loading ? '⏳ Salvando dados e redirecionando...' : 'Assinar com PayPal — R$ 50/mês'}
       </button>
       <p style={{ textAlign: 'center', fontSize: 11, color: '#6b7280', marginTop: 10 }}>
         🔒 Pagamento seguro. Você será redirecionado ao PayPal.

@@ -146,6 +146,40 @@ export default function BuilderForm({ motel, userId }: Props) {
   const delTarifa = (si: number, ti: number) => setSuites(p => p.map((s, j) => j === si ? { ...s, tarifas: s.tarifas.filter((_, k) => k !== ti) } : s))
 
   // ── Salvar informações do motel (step 1) ──
+  // Salvar tudo (motel + suítes) antes de ir ao PayPal
+  const saveAll = async (): Promise<string | null> => {
+    try {
+      // 1. Salvar informações do motel
+      const id = await saveMotelInfo()
+      if (!id) return null
+
+      // 2. Salvar suítes imediatamente
+      const suitesRes = await fetchWithAuth('/api/suites', {
+        method: 'POST',
+        body: JSON.stringify({
+          motel_id: id,
+          suites: suites.map(s => ({
+            id: s.id, nome: s.nome, descricao: s.descricao,
+            servicos: s.servicos, fotos: s.fotos,
+            tarifas: s.tarifas
+              .filter(t => t.periodo && t.preco)
+              .map(t => ({ periodo: t.periodo, preco: parseFloat(t.preco) })),
+          })),
+        }),
+      })
+      if (!suitesRes.ok) {
+        const err = await suitesRes.json()
+        console.error('[saveAll] suites error:', err)
+        // Continuar mesmo com erro nas suítes — PayPal é mais importante
+      }
+
+      return id
+    } catch (err: any) {
+      console.error('[saveAll]', err.message)
+      return null
+    }
+  }
+
   const saveMotelInfo = async (): Promise<string | null> => {
     if (motelId) {
       // Atualizar motel existente
@@ -504,7 +538,7 @@ export default function BuilderForm({ motel, userId }: Props) {
             motelId={motelId}
             alreadyActive={paypalOk}
             onSuccess={() => setPaypalOk(true)}
-            onSaveFirst={saveMotelInfo}
+            onSaveFirst={saveAll}
           />
         </div>
 
