@@ -2,8 +2,6 @@ import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import { createClient } from '@supabase/supabase-js'
 import { motelMeta } from '@/lib/utils'
-import NavBar from '@/components/shared/NavBar'
-import Footer from '@/components/shared/Footer'
 import MotelVitrine from '@/components/vitrine/MotelVitrine'
 
 interface Props { params: { slug: string } }
@@ -101,9 +99,7 @@ export default async function MotelPage({ params }: Props) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <NavBar />
       <MotelVitrine motel={motel} />
-      <Footer />
     </>
   )
 }

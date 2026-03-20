@@ -182,12 +182,8 @@ export default function MotelVitrine({ motel }: Props) {
       )}
 
       {/* ── VITRINE FOOTER ── */}
-      <footer style={{ background: '#161a24', borderTop: '1px solid #252d3d', padding: '20px 40px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+      <footer style={{ background: '#161a24', borderTop: '1px solid #252d3d', padding: '20px 40px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <span style={{ fontSize: 12, color: '#6b7280' }}>© {new Date().getFullYear()} {motel.nome} · {motel.endereco}</span>
-        <span style={{ fontSize: 11, color: '#6b7280' }}>
-          Powered by{' '}
-          <a href="/" style={{ color: '#d4a943', textDecoration: 'none', fontWeight: 600 }}>MotéisBrasil</a>
-        </span>
       </footer>
     </main>
   )
