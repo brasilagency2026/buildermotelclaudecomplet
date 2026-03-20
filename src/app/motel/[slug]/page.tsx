@@ -74,9 +74,9 @@ export default async function MotelPage({ params }: Props) {
   if (!motel) notFound()
 
   const base = process.env.NEXT_PUBLIC_SITE_URL || ''
-  const allServices = [...new Set(
-    (motel.suites || []).flatMap(s => (s.servicos || '').split(',').map((x: string) => x.trim()).filter(Boolean))
-  )]
+  const allServices = Array.from(new Set(
+    (motel.suites || []).flatMap((s: any) => (s.servicos || '').split(',').map((x: string) => x.trim()).filter(Boolean))
+  ))
   const allPrices = (motel.suites || []).flatMap(s => (s.tarifas || []).map((t: any) => t.preco))
   const priceMin = allPrices.length ? Math.min(...allPrices) : null
   const priceMax = allPrices.length ? Math.max(...allPrices) : null
