@@ -86,7 +86,9 @@ export default function HomeClient({ initialMoteis }: { initialMoteis: MotelCard
   }, [sp])
 
   const requestLocation = () => {
-    setGeoLoading(true); setGeoError('')
+    setGeoLoading(true); setGeoError(''); setSearchActive(false)
+    // Limpar parâmetros da URL sem recarregar a página
+    window.history.pushState({}, '', '/')
     navigator.geolocation.getCurrentPosition(
       ({ coords: { latitude: lat, longitude: lng } }) => {
         setUserCoords({ lat, lng })
@@ -120,13 +122,40 @@ export default function HomeClient({ initialMoteis }: { initialMoteis: MotelCard
       <div style={{ maxWidth: 1180, margin: '0 auto', padding: '0 20px' }}>
         {/* Banner busca ativa */}
         {searchActive && (q || estado) && (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', background: 'rgba(212,0,31,.06)', border: '1px solid rgba(212,0,31,.2)', borderRadius: 8, marginBottom: 12, fontSize: 13 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, padding: '10px 16px', background: 'rgba(212,0,31,.06)', border: '1px solid rgba(212,0,31,.2)', borderRadius: 8, marginBottom: 12, fontSize: 13 }}>
             <span style={{ color: '#ff6b6b' }}>
               🔍 Buscando: {[q, estado].filter(Boolean).join(' · ')}
             </span>
-            <a href="/" style={{ fontSize: 11, color: '#6b7280', textDecoration: 'none' }}>
-              ✕ Limpar busca
-            </a>
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+              <button
+                onClick={() => {
+                  setSearchActive(false)
+                  setGeoActive(false)
+                  setGeoLoading(true)
+                  window.history.pushState({}, '', '/')
+                  navigator.geolocation.getCurrentPosition(
+                    ({ coords: { latitude: lat, longitude: lng } }) => {
+                      setUserCoords({ lat, lng })
+                      setGeoActive(true)
+                      setGeoLoading(false)
+                      fetchMoteis({ lat, lng })
+                    },
+                    () => {
+                      setGeoLoading(false)
+                      fetchMoteis({})
+                    },
+                    { timeout: 8000 }
+                  )
+                }}
+                style={{ fontSize: 11, color: '#4ade80', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 4 }}
+              >
+                📍 Voltar à minha localização
+              </button>
+              <span style={{ color: '#252d3d' }}>|</span>
+              <a href="/" style={{ fontSize: 11, color: '#6b7280', textDecoration: 'none' }}>
+                ✕ Ver todos
+              </a>
+            </div>
           </div>
         )}
         {geoLoading && (
@@ -145,10 +174,19 @@ export default function HomeClient({ initialMoteis }: { initialMoteis: MotelCard
 
       <section style={{ maxWidth: 1180, margin: '0 auto', padding: '0 20px 40px' }}>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 20, paddingBottom: 16, borderBottom: '1px solid #1e1e1e' }}>
-          {!geoActive && !geoLoading && !searchActive && (
-            <button onClick={requestLocation} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px', background: 'rgba(212,0,31,.06)', border: '1px solid rgba(212,0,31,.3)', borderRadius: 4, color: '#ff4458', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
-              📍 Usar minha localização
+          {!geoActive && !geoLoading && (
+            <button
+              onClick={requestLocation}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px', background: 'rgba(212,0,31,.06)', border: '1px solid rgba(212,0,31,.3)', borderRadius: 4, color: '#ff4458', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+            >
+              📍 {searchActive ? 'Voltar à minha localização' : 'Usar minha localização'}
             </button>
+          )}
+          {geoActive && !searchActive && (
+            <span style={{ fontSize: 11, color: '#4ade80', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#4ade80', display: 'inline-block' }} />
+              Ordenado por proximidade
+            </span>
           )}
           {geoError && <span style={{ fontSize: 11, color: '#f87171', alignSelf: 'center' }}>⚠ {geoError}</span>}
           {SERVICOS.map(s => (
