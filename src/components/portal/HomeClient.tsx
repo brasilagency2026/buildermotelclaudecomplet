@@ -18,6 +18,7 @@ const MotelMap = dynamic(() => import('./MotelMap'), {
 const SERVICOS = ['Hidromassagem', 'Sauna', 'Piscina', 'Lareira', 'Wi-Fi', 'TV Smart']
 
 export default function HomeClient({ initialMoteis }: { initialMoteis: MotelCard[] }) {
+  const sp = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null
   const [moteis, setMoteis] = useState(initialMoteis)
   const [loading, setLoading] = useState(false)
   const [geoLoading, setGeoLoading] = useState(false)
@@ -29,9 +30,16 @@ export default function HomeClient({ initialMoteis }: { initialMoteis: MotelCard
   const fetchMoteis = useCallback(async (lat?: number, lng?: number, filters?: string[]) => {
     setLoading(true)
     try {
+      const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams()
       const params = new URLSearchParams()
-      if (lat) params.set('lat', String(lat))
-      if (lng) params.set('lng', String(lng))
+      if (urlParams.get('q')) params.set('q', urlParams.get('q')!)
+      if (urlParams.get('estado')) params.set('estado', urlParams.get('estado')!)
+      const urlLat = urlParams.get('lat')
+      const urlLng = urlParams.get('lng')
+      const useLat = lat || (urlLat ? parseFloat(urlLat) : undefined)
+      const useLng = lng || (urlLng ? parseFloat(urlLng) : undefined)
+      if (useLat) params.set('lat', String(useLat))
+      if (useLng) params.set('lng', String(useLng))
       const res = await fetch(`/api/moteis?${params}`)
       const data = await res.json()
       let list: MotelCard[] = data.moteis || []
