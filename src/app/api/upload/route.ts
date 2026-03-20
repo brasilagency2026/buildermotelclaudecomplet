@@ -28,7 +28,11 @@ export async function POST(req: NextRequest) {
     if (!file) return NextResponse.json({ error: 'Nenhum arquivo enviado' }, { status: 400 })
 
     const ext = (file.name.split('.').pop() || 'jpg').toLowerCase()
-    const path = `${user.id}/${motelId}/${Date.now()}.${ext}`
+    // Nom de fichier descriptif pour SEO (Google Images)
+    const suiteName = (form.get('suite_name') as string || '').toLowerCase().replace(/[^a-z0-9]/g, '-').slice(0, 30)
+    const motelName = (form.get('motel_name') as string || '').toLowerCase().replace(/[^a-z0-9]/g, '-').slice(0, 30)
+    const descriptor = [motelName, suiteName].filter(Boolean).join('-') || 'foto'
+    const path = `${user.id}/${motelId}/${descriptor}-${Date.now()}.${ext}`
     const buffer = Buffer.from(await file.arrayBuffer())
 
     const { data, error } = await admin.storage

@@ -115,6 +115,8 @@ export default function BuilderForm({ motel, userId }: Props) {
     const fd = new FormData()
     fd.append('file', file)
     if (motelId) fd.append('motel_id', motelId)
+    if (nome) fd.append('motel_name', nome)
+    fd.append('suite_name', 'capa')
     const res = await fetchWithAuth('/api/upload', { method: 'POST', body: fd })
     const { url } = await res.json()
     setFotoCapa(url)
@@ -127,6 +129,8 @@ export default function BuilderForm({ motel, userId }: Props) {
     const fd = new FormData()
     fd.append('file', file)
     if (motelId) fd.append('motel_id', motelId)
+    if (nome) fd.append('motel_name', nome)
+    if (suites[si]?.nome) fd.append('suite_name', suites[si].nome)
     const res = await fetchWithAuth('/api/upload', { method: 'POST', body: fd })
     const { url } = await res.json()
     setSuites(p => p.map((s, j) => j === si ? { ...s, fotos: [...s.fotos, url] } : s))
@@ -320,7 +324,7 @@ export default function BuilderForm({ motel, userId }: Props) {
               {fotoCapa ? (
                 <>
                   <div style={{ position: 'relative', width: 48, height: 48, borderRadius: 6, overflow: 'hidden', flexShrink: 0 }}>
-                    <Image src={fotoCapa} alt="capa" fill style={{ objectFit: 'cover' }} />
+                    <Image src={fotoCapa} alt={`Foto principal — ${nome || "motel"}`} fill style={{ objectFit: 'cover' }} />
                   </div>
                   <span style={{ fontSize: 13, color: '#d4a943', fontWeight: 600 }}>
                     {uploadingCapa ? '⏳ Enviando...' : '✓ Foto carregada — clique para trocar'}
@@ -409,7 +413,7 @@ export default function BuilderForm({ motel, userId }: Props) {
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 10 }}>
                     {s.fotos.map((f, fi) => (
                       <div key={fi} style={{ position: 'relative', width: 64, height: 64, borderRadius: 8, overflow: 'hidden', border: fi === 0 ? '2px solid #d4a943' : '2px solid #252d3d' }}>
-                        <Image src={f} alt="" fill style={{ objectFit: 'cover' }} />
+                        <Image src={f} alt={`${s.nome || `Suíte ${si + 1}`} — foto ${fi + 1} — ${nome || "motel"}`} fill style={{ objectFit: 'cover' }} />
                         <button
                           onClick={() => upSuite(si, 'fotos', s.fotos.filter((_, k) => k !== fi))}
                           style={{ position: 'absolute', top: 2, right: 2, width: 16, height: 16, background: 'rgba(0,0,0,.75)', color: '#fff', border: 'none', borderRadius: '50%', fontSize: 9, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}

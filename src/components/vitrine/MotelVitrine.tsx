@@ -103,7 +103,7 @@ export default function MotelVitrine({ motel }: Props) {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(200px,1fr))', gap: 10 }}>
             {fotos.slice(0, 8).map((f, i) => (
               <div key={i} style={{ position: 'relative', aspectRatio: '4/3', borderRadius: 10, overflow: 'hidden', background: '#1c2130' }}>
-                <Image src={f} alt={`${motel.nome} foto ${i+1}`} fill style={{ objectFit: 'cover' }} sizes="220px" />
+                <Image src={f} alt={`${motel.nome} — ${motel.cidade}, ${motel.estado} — foto ${i+1}`} fill style={{ objectFit: 'cover' }} sizes="220px" />
               </div>
             ))}
           </div>
@@ -198,7 +198,7 @@ function SuiteCard({ suite, wpp, motelWhatsapp, motelNome }: { suite: Suite; wpp
       {/* Foto carousel */}
       <div style={{ position: 'relative', height: 190, background: '#1c2130', overflow: 'hidden' }}>
         {fotos.length > 0 ? (
-          <Image src={fotos[fotoIdx]} alt={suite.nome} fill style={{ objectFit: 'cover' }} sizes="320px" />
+          <Image src={fotos[fotoIdx]} alt={`${suite.nome} — ${motelNome}`} fill style={{ objectFit: 'cover' }} sizes="320px" />
         ) : (
           <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 40, opacity: .2 }}>🛏</div>
         )}

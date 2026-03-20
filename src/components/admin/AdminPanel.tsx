@@ -229,7 +229,7 @@ export default function AdminPanel() {
                           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                             <div style={{ width: 36, height: 36, borderRadius: 6, background: '#252d3d', overflow: 'hidden', flexShrink: 0, fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                               {m.foto_capa
-                                ? <img src={m.foto_capa} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                ? <img src={m.foto_capa} alt={`Foto — ${m.nome}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                 : '🏨'}
                             </div>
                             <div>
