@@ -15,7 +15,6 @@ const MotelMap = dynamic(() => import('./MotelMap'), {
   ),
 })
 
-const SERVICOS = ['Hidromassagem', 'Sauna', 'Piscina', 'Lareira', 'Wi-Fi', 'TV Smart']
 
 export default function HomeClient({ initialMoteis }: { initialMoteis: MotelCard[] }) {
   const sp = useSearchParams()
@@ -25,13 +24,11 @@ export default function HomeClient({ initialMoteis }: { initialMoteis: MotelCard
   const [geoActive, setGeoActive] = useState(false)
   const [geoError, setGeoError] = useState('')
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null)
-  const [activeFilters, setActiveFilters] = useState<string[]>([])
   const [searchActive, setSearchActive] = useState(false)
 
   const fetchMoteis = useCallback(async (opts: {
     lat?: number
     lng?: number
-    filters?: string[]
     q?: string
     estado?: string
   } = {}) => {
@@ -45,13 +42,11 @@ export default function HomeClient({ initialMoteis }: { initialMoteis: MotelCard
       const res = await fetch(`/api/moteis?${params}`)
       const data = await res.json()
       let list: MotelCard[] = data.moteis || []
-      const f = opts.filters ?? activeFilters
-      if (f.length) list = list.filter(m => f.every(s => (m as any).servicos?.includes(s)))
       setMoteis(list)
     } finally {
       setLoading(false)
     }
-  }, [activeFilters])
+  }, [])
 
   // Reagir aos parâmetros da URL (busca do HeroSearch)
   useEffect(() => {
@@ -104,15 +99,6 @@ export default function HomeClient({ initialMoteis }: { initialMoteis: MotelCard
     )
   }
 
-  const toggleFilter = (f: string) => {
-    const next = activeFilters.includes(f) ? activeFilters.filter(x => x !== f) : [...activeFilters, f]
-    setActiveFilters(next)
-    const q = sp.get('q') || undefined
-    const estado = sp.get('estado') || undefined
-    const lat = sp.get('lat') ? parseFloat(sp.get('lat')!) : userCoords?.lat
-    const lng = sp.get('lng') ? parseFloat(sp.get('lng')!) : userCoords?.lng
-    fetchMoteis({ q, estado, lat, lng, filters: next })
-  }
 
   const q = sp.get('q')
   const estado = sp.get('estado')
@@ -189,11 +175,6 @@ export default function HomeClient({ initialMoteis }: { initialMoteis: MotelCard
             </span>
           )}
           {geoError && <span style={{ fontSize: 11, color: '#f87171', alignSelf: 'center' }}>⚠ {geoError}</span>}
-          {SERVICOS.map(s => (
-            <button key={s} onClick={() => toggleFilter(s)} style={{ padding: '6px 11px', border: `1px solid ${activeFilters.includes(s) ? 'rgba(212,0,31,.5)' : '#252d3d'}`, borderRadius: 4, fontSize: 11, fontWeight: 600, color: activeFilters.includes(s) ? '#ff4458' : '#6b7280', background: activeFilters.includes(s) ? 'rgba(212,0,31,.08)' : 'transparent', cursor: 'pointer', fontFamily: 'inherit' }}>
-              {s}
-            </button>
-          ))}
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
