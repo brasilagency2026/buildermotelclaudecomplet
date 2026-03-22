@@ -19,6 +19,15 @@ const MotelMap = dynamic(() => import('./MotelMap'), {
 export default function HomeClient({ initialMoteis }: { initialMoteis: MotelCard[] }) {
   const sp = useSearchParams()
   const [moteis, setMoteis] = useState(initialMoteis)
+  const [allMoteis, setAllMoteis] = useState(initialMoteis) // tous les moteis pour la carte
+
+  // Carregar TODOS os moteis para o mapa — sem filtro de proximidade
+  useEffect(() => {
+    fetch('/api/moteis?limit=500')
+      .then(r => r.json())
+      .then(d => { if (d.moteis?.length) setAllMoteis(d.moteis) })
+      .catch(() => {})
+  }, [])
   const [loading, setLoading] = useState(false)
   const [geoLoading, setGeoLoading] = useState(false)
   const [geoActive, setGeoActive] = useState(false)
@@ -217,7 +226,7 @@ export default function HomeClient({ initialMoteis }: { initialMoteis: MotelCard
           <p style={{ fontSize: 12, color: '#6b7280', marginBottom: 12 }}>
             Clique em qualquer pin para ver detalhes do motel.
           </p>
-          <MotelMap moteis={moteis} userCoords={userCoords} height={450} />
+          <MotelMap moteis={allMoteis} userCoords={userCoords} height={450} />
         </div>
       </div>
 
