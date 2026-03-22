@@ -9,9 +9,9 @@ interface Props {
   onSaveFirst?: () => Promise<string | null>
 }
 
-const PAYPAL_CLIENT_ID = 'AQ25wGVL7_upbyX9_dc6AH-Q8mLloaWWbY1OvKTRke6KrwvUjvOGui0SJOWofvQxzn9dOulnNjEz35a6'
-const PLAN_ID = 'P-0KY4432768328150PNG75TUY'
-const CONTAINER_ID = 'paypal-button-container-P-0KY4432768328150PNG75TUY'
+const PAYPAL_CLIENT_ID = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || ''
+const PLAN_ID = process.env.NEXT_PUBLIC_PAYPAL_PREMIUM_PLAN_ID || ''
+const CONTAINER_ID = 'paypal-button-container-' + (process.env.NEXT_PUBLIC_PAYPAL_PREMIUM_PLAN_ID || 'paypal')
 
 export default function PayPalSubscribe({ motelId, alreadyActive, onSuccess, onSaveFirst }: Props) {
   const [loading, setLoading] = useState(false)
