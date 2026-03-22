@@ -9,88 +9,78 @@ interface Props {
   onSaveFirst?: () => Promise<string | null>
 }
 
+const PAYPAL_CLIENT_ID = 'Af_aZmID29eiDEL105Q8rxGGX81__Fvn8OtiWIt_tzl2fCFtk7ug8G9u6LtO_7ChfThuqR_m2MuhzX0A'
+const PLAN_ID = 'P-9BB84582HB949730TNG2WKMI'
+const CONTAINER_ID = 'paypal-button-container-' + PLAN_ID
+
 export default function PayPalSubscribe({ motelId, alreadyActive, onSuccess, onSaveFirst }: Props) {
   const [loading, setLoading] = useState(false)
-  const [sdkLoading, setSdkLoading] = useState(true)
+  const [sdkReady, setSdkReady] = useState(false)
   const [error, setError] = useState('')
-  const [savedId, setSavedId] = useState(motelId)
-  const btnRef = useRef<HTMLDivElement>(null)
-  const sdkRendered = useRef(false)
+  const [currentId, setCurrentId] = useState(motelId)
+  const rendered = useRef(false)
 
-  const clientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID
-  const planId = process.env.NEXT_PUBLIC_PAYPAL_PREMIUM_PLAN_ID
-
-  // Salvar dados antes de renderizar botões PayPal
-  const preparar = async (): Promise<string | null> => {
-    let id = savedId || motelId
+  // Salvar dados antes de ir ao PayPal
+  const prepararId = async (): Promise<string | null> => {
+    let id = currentId || motelId
     if (!id && onSaveFirst) {
       setLoading(true)
-      id = await onSaveFirst() || ''
+      const saved = await onSaveFirst()
       setLoading(false)
-      if (!id) {
+      if (!saved) {
         setError('Preencha as informações do motel antes de assinar.')
         return null
       }
-      setSavedId(id)
+      setCurrentId(saved)
+      return saved
     }
     return id || null
   }
 
-  // Carregar SDK PayPal e renderizar botões
   useEffect(() => {
-    if (alreadyActive || sdkRendered.current) return
-    if (!clientId || !planId) { setSdkLoading(false); return }
+    if (alreadyActive || rendered.current) return
 
-    const scriptId = 'paypal-sdk'
-    if (document.getElementById(scriptId)) {
-      renderButtons()
-      return
+    // Carregar o SDK exatamente como PayPal recomenda
+    const scriptId = 'paypal-sdk-script'
+    if (!document.getElementById(scriptId)) {
+      const script = document.createElement('script')
+      script.id = scriptId
+      script.src = `https://www.paypal.com/sdk/js?client-id=${PAYPAL_CLIENT_ID}&vault=true&intent=subscription&locale=pt_BR&currency=BRL`
+      script.setAttribute('data-sdk-integration-source', 'button-factory')
+      script.async = true
+      script.onload = () => setSdkReady(true)
+      script.onerror = () => setError('Erro ao carregar PayPal. Tente usar o botão alternativo abaixo.')
+      document.body.appendChild(script)
+    } else {
+      setSdkReady(true)
     }
+  }, [alreadyActive])
 
-    const script = document.createElement('script')
-    script.id = scriptId
-    // vault=true + intent=subscription obrigatório para assinaturas
-    script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&vault=true&intent=subscription&locale=pt_BR&currency=BRL&components=buttons`
-    script.async = true
-    script.onload = () => renderButtons()
-    script.onerror = () => { setSdkLoading(false); setError('Erro ao carregar PayPal. Tente novamente.') }
-    document.body.appendChild(script)
-  }, [alreadyActive, clientId, planId])
-
-  const renderButtons = () => {
-    setSdkLoading(false)
+  useEffect(() => {
+    if (!sdkReady || rendered.current || alreadyActive) return
     const paypal = (window as any).paypal
-    if (!paypal || !btnRef.current || sdkRendered.current) return
-    sdkRendered.current = true
+    if (!paypal) return
 
-    // Limpar container
-    btnRef.current.innerHTML = ''
+    const container = document.getElementById(CONTAINER_ID)
+    if (!container) return
+
+    rendered.current = true
 
     paypal.Buttons({
       style: {
-        shape: 'rect',
+        shape: 'pill',
         color: 'gold',
-        layout: 'vertical',     // empilhé: PayPal + carte bancaire
+        layout: 'vertical',
         label: 'subscribe',
-        height: 48,
       },
-      createSubscription: async (_data: any, actions: any) => {
-        const id = await preparar()
-        if (!id) throw new Error('Motel não encontrado')
+      createSubscription: async function(_data: any, actions: any) {
+        // Salvar motel + suítes antes de criar a subscription
+        const id = await prepararId()
+        if (!id) throw new Error('Dados do motel não salvos.')
 
-        // Criar subscription via nossa API (para ter o custom_id correto)
-        const res = await fetchWithAuth('/api/paypal', {
-          method: 'POST',
-          body: JSON.stringify({ motel_id: id }),
-        })
-        const data = await res.json()
-        if (!res.ok) throw new Error(data.error)
-
-        // Extrair subscription_id da approval_url para usar com o SDK
-        // OU usar actions.subscription.create diretamente
         return actions.subscription.create({
-          plan_id: planId,
-          custom_id: id,
+          plan_id: PLAN_ID,
+          custom_id: id, // nosso motel_id para o webhook
           application_context: {
             shipping_preference: 'NO_SHIPPING',
             user_action: 'SUBSCRIBE_NOW',
@@ -98,11 +88,11 @@ export default function PayPalSubscribe({ motelId, alreadyActive, onSuccess, onS
           }
         })
       },
-      onApprove: async (data: any) => {
+      onApprove: async function(data: any) {
         setLoading(true)
         try {
+          const id = currentId || motelId
           // Ativar motel imediatamente
-          const id = savedId || motelId
           await fetchWithAuth('/api/paypal/success', {
             method: 'POST',
             body: JSON.stringify({
@@ -110,24 +100,25 @@ export default function PayPalSubscribe({ motelId, alreadyActive, onSuccess, onS
               subscription_id: data.subscriptionID,
             }),
           })
-          onSuccess()
           setError('')
-        } catch (err: any) {
-          setError('Assinatura aprovada! Aguarde a ativação.')
-          onSuccess() // ativar mesmo com erro
+          onSuccess()
+        } catch {
+          // Mesmo com erro, a assinatura foi aprovada
+          onSuccess()
         } finally {
           setLoading(false)
         }
       },
-      onError: (err: any) => {
-        console.error('[PayPal]', err)
-        setError('Erro no pagamento. Tente novamente ou use o botão abaixo.')
+      onError: function(err: any) {
+        console.error('[PayPal SDK]', err)
+        setError('Ocorreu um erro no pagamento. Tente novamente ou use o botão alternativo.')
+        rendered.current = false
       },
-      onCancel: () => {
-        setError('Pagamento cancelado. Seus dados foram salvos — assine quando quiser.')
+      onCancel: function() {
+        setError('Pagamento cancelado. Seus dados foram salvos — você pode assinar quando quiser.')
       },
-    }).render(btnRef.current)
-  }
+    }).render('#' + CONTAINER_ID)
+  }, [sdkReady])
 
   if (alreadyActive) return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 18px', background: 'rgba(0,200,83,.08)', border: '1px solid rgba(0,200,83,.25)', borderRadius: 10, fontSize: 14, color: '#4ade80', fontWeight: 600 }}>
@@ -137,7 +128,7 @@ export default function PayPalSubscribe({ motelId, alreadyActive, onSuccess, onS
 
   return (
     <div>
-      {/* Preço e benefícios */}
+      {/* Preço */}
       <div style={{ background: 'rgba(212,169,67,.06)', border: '1px solid rgba(212,169,67,.2)', borderRadius: 12, padding: 20, marginBottom: 20 }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 14 }}>
           <span style={{ fontFamily: 'var(--font-playfair),serif', fontSize: 40, fontWeight: 900, color: '#d4a943', lineHeight: 1 }}>R$50</span>
@@ -166,57 +157,62 @@ export default function PayPalSubscribe({ motelId, alreadyActive, onSuccess, onS
         </div>
       )}
 
-      {/* Botões PayPal SDK — inclui PayPal + Cartão */}
-      {sdkLoading ? (
-        <div style={{ padding: '16px', textAlign: 'center', color: '#6b7280', fontSize: 13 }}>
-          ⏳ Carregando opções de pagamento...
-        </div>
-      ) : (
-        <div>
-          {/* Container dos botões PayPal SDK */}
-          <div ref={btnRef} style={{ marginBottom: 12 }} />
-
-          {/* Separador */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-            <div style={{ flex: 1, height: 1, background: '#252d3d' }} />
-            <span style={{ fontSize: 11, color: '#374151' }}>ou</span>
-            <div style={{ flex: 1, height: 1, background: '#252d3d' }} />
-          </div>
-
-          {/* Botão fallback — redirecionamento direto */}
-          <button
-            onClick={async () => {
-              setLoading(true); setError('')
-              try {
-                const id = await preparar()
-                if (!id) return
-                const res = await fetchWithAuth('/api/paypal', {
-                  method: 'POST',
-                  body: JSON.stringify({ motel_id: id }),
-                })
-                const data = await res.json()
-                if (!res.ok) throw new Error(data.error)
-                if (data.approval_url) window.location.href = data.approval_url
-              } catch (err: any) {
-                setError(err.message)
-              } finally {
-                setLoading(false)
-              }
-            }}
-            disabled={loading}
-            style={{ width: '100%', padding: '12px', background: '#1c2130', border: '1px solid #252d3d', borderRadius: 8, color: '#9ca3af', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
-          >
-            <span style={{ fontSize: 16 }}>🅿</span>
-            {loading ? '⏳ Aguarde...' : 'Pagar com conta PayPal'}
-          </button>
+      {/* Loading salvar dados */}
+      {loading && (
+        <div style={{ padding: '12px', textAlign: 'center', color: '#d4a943', fontSize: 13, marginBottom: 12 }}>
+          ⏳ Salvando seus dados...
         </div>
       )}
 
-      {/* Info segurança */}
-      <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, flexWrap: 'wrap' }}>
-        <span style={{ fontSize: 11, color: '#374151', display: 'flex', alignItems: 'center', gap: 4 }}>🔒 Pagamento 100% seguro</span>
-        <span style={{ fontSize: 11, color: '#374151', display: 'flex', alignItems: 'center', gap: 4 }}>💳 Cartão de crédito ou débito</span>
-        <span style={{ fontSize: 11, color: '#374151', display: 'flex', alignItems: 'center', gap: 4 }}>🏦 Conta PayPal</span>
+      {/* Botões PayPal SDK (PayPal + Cartão) */}
+      {!sdkReady && !error && (
+        <div style={{ padding: '16px', textAlign: 'center', color: '#6b7280', fontSize: 13, marginBottom: 12 }}>
+          ⏳ Carregando opções de pagamento...
+        </div>
+      )}
+
+      {/* Container oficial PayPal */}
+      <div id={CONTAINER_ID} style={{ marginBottom: 16 }} />
+
+      {/* Separador */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '12px 0' }}>
+        <div style={{ flex: 1, height: 1, background: '#252d3d' }} />
+        <span style={{ fontSize: 11, color: '#374151' }}>ou pague direto pelo link</span>
+        <div style={{ flex: 1, height: 1, background: '#252d3d' }} />
+      </div>
+
+      {/* Botão alternativo — redirecionamento direto */}
+      <button
+        onClick={async () => {
+          setLoading(true); setError('')
+          try {
+            const id = await prepararId()
+            if (!id) return
+            const res = await fetchWithAuth('/api/paypal', {
+              method: 'POST',
+              body: JSON.stringify({ motel_id: id }),
+            })
+            const data = await res.json()
+            if (!res.ok) throw new Error(data.error)
+            if (data.approval_url) window.location.href = data.approval_url
+          } catch (err: any) {
+            setError(err.message)
+          } finally {
+            setLoading(false)
+          }
+        }}
+        disabled={loading}
+        style={{ width: '100%', padding: '12px', background: '#1c2130', border: '1px solid #252d3d', borderRadius: 8, color: '#9ca3af', fontSize: 13, cursor: loading ? 'wait' : 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+      >
+        <span style={{ fontSize: 16 }}>🅿</span>
+        {loading ? '⏳ Aguarde...' : 'Assinar via link PayPal'}
+      </button>
+
+      {/* Segurança */}
+      <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, flexWrap: 'wrap' }}>
+        <span style={{ fontSize: 11, color: '#374151' }}>🔒 Pagamento seguro</span>
+        <span style={{ fontSize: 11, color: '#374151' }}>💳 Cartão de crédito ou débito</span>
+        <span style={{ fontSize: 11, color: '#374151' }}>🏦 Conta PayPal</span>
       </div>
     </div>
   )
